@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 import time
 import json
 
@@ -28,6 +28,9 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+if TYPE_CHECKING:
+    from mediapipe.tasks.python.vision.hand_landmarker import HandLandmarker
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -50,7 +53,7 @@ def ensure_directories() -> None:
         (RAW_DATA_DIR / label).mkdir(parents=True, exist_ok=True)
 
 
-def build_detector() -> vision.HandLandmarker:
+def build_detector() -> HandLandmarker:
     """Create a MediaPipe hand landmarker configured for webcam video."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(

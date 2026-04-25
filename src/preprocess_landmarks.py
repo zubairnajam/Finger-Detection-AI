@@ -11,7 +11,7 @@ Usage:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 import csv
 import json
 
@@ -21,6 +21,9 @@ import numpy as np
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from sklearn.model_selection import train_test_split
+
+if TYPE_CHECKING:
+    from mediapipe.tasks.python.vision.hand_landmarker import HandLandmarker
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -42,7 +45,7 @@ def ensure_output_dirs() -> None:
     TEST_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def build_detector() -> vision.HandLandmarker:
+def build_detector() -> HandLandmarker:
     """Create a MediaPipe detector configured for still images."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
@@ -61,7 +64,7 @@ def build_detector() -> vision.HandLandmarker:
     return vision.HandLandmarker.create_from_options(options)
 
 
-def extract_features(image_path: Path, detector: vision.HandLandmarker) -> List[float] | None:
+def extract_features(image_path: Path, detector: HandLandmarker) -> List[float] | None:
     """Return flattened 63-value landmark features for the first detected hand."""
     sidecar_path = image_path.with_suffix(".json")
     if sidecar_path.exists():
