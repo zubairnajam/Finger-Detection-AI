@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections import Counter, deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 import json
 import time
 
@@ -25,6 +25,9 @@ import numpy as np
 import tensorflow as tf
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+if TYPE_CHECKING:
+    from mediapipe.tasks.python.vision.hand_landmarker import HandLandmarker
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -69,7 +72,7 @@ def load_model_and_scaler():
     return model, mean, std
 
 
-def build_detector() -> vision.HandLandmarker:
+def build_detector() -> HandLandmarker:
     """Create the MediaPipe hand detector for webcam frames."""
     if not HAND_LANDMARKER_PATH.exists():
         raise FileNotFoundError(f"Missing MediaPipe task file: {HAND_LANDMARKER_PATH}")
