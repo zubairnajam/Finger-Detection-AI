@@ -1,10 +1,10 @@
 {
-  "train_samples": 175,
-  "validation_samples": 35,
-  "test_samples": 44,
+  "train_samples": 219,
+  "validation_samples": 44,
+  "test_samples": 55,
   "feature_size": 63,
-  "epochs_ran": 68,
-  "test_accuracy": 0.8863636363636364,
+  "epochs_ran": 53,
+  "test_accuracy": 0.8181818181818182,
   "model_path": "models\\finger_count_model.keras",
   "scaler_path": "models\\feature_scaler.npz",
   "rerun_note": "After collecting more samples, rerun preprocess_landmarks.py and then this script."
