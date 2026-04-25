@@ -1,13 +1,14 @@
 """
-Real-time finger-count inference with smoothing, countdown, and auto-capture.
+Legacy real-time finger-count prototype with smoothing and auto-capture.
 
 Usage:
-    python src/live_inference.py
+    python tools/live_inference.py
 
 Controls:
     q  Quit
     r  Reset countdown and prediction history
     c  Toggle auto-capture on/off
+    s  Save a manual screenshot/capture
 """
 
 from __future__ import annotations
@@ -34,7 +35,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "models" / "finger_count_model.keras"
 SCALER_PATH = PROJECT_ROOT / "models" / "feature_scaler.npz"
 HAND_LANDMARKER_PATH = PROJECT_ROOT / "hand_landmarker.task"
-CAPTURE_DIR = PROJECT_ROOT / "outputs" / "captures"
+CAPTURE_DIR = PROJECT_ROOT / "outputs" / "legacy_captures"
+WINDOW_NAME = "Legacy Gesture-Controlled Prototype"
 
 ROLLING_WINDOW_SIZE = 8
 MIN_STABLE_VOTES = 6
@@ -42,7 +44,7 @@ MIN_CONFIDENCE = 0.65
 COUNTDOWN_SECONDS = 3.0
 CAPTURE_COOLDOWN_SECONDS = 2.0
 FRAME_TIME_MS = 33
-LABELS = [1, 2, 3, 4, 5]
+LABELS = [0, 1, 2, 3, 4, 5]
 
 
 @dataclass
@@ -55,6 +57,15 @@ class StablePrediction:
 def ensure_dirs() -> None:
     """Create runtime output directories."""
     CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def setup_window(window_name: str) -> None:
+    """Open the OpenCV preview window in full-screen mode."""
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    try:
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    except cv2.error:
+        pass
 
 
 def load_model_and_scaler():
@@ -149,27 +160,31 @@ def draw_landmarks(frame_bgr, detection_result) -> None:
 
 
 def save_capture(
-    frame_bgr,
+    raw_frame_bgr,
+    preview_frame_bgr,
     stable_label: int,
     confidence: float,
-) -> str:
-    """Save an auto-captured image and metadata."""
+) -> tuple[str, str]:
+    """Save both the clean camera image and the annotated preview screenshot."""
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     stem = f"{timestamp}_{time.time_ns()}"
     image_path = CAPTURE_DIR / f"{stem}_label_{stable_label}.jpg"
+    screenshot_path = CAPTURE_DIR / f"{stem}_label_{stable_label}_screenshot.jpg"
     metadata_path = CAPTURE_DIR / f"{stem}_label_{stable_label}.json"
 
-    cv2.imwrite(str(image_path), frame_bgr)
+    cv2.imwrite(str(image_path), raw_frame_bgr)
+    cv2.imwrite(str(screenshot_path), preview_frame_bgr)
     metadata = {
         "label": stable_label,
         "confidence": confidence,
         "image_path": str(image_path.relative_to(PROJECT_ROOT)),
+        "screenshot_path": str(screenshot_path.relative_to(PROJECT_ROOT)),
         "saved_at": timestamp,
     }
     with metadata_path.open("w", encoding="utf-8") as handle:
         json.dump(metadata, handle, indent=2)
 
-    return image_path.name
+    return image_path.name, screenshot_path.name
 
 
 def draw_overlay(
@@ -198,7 +213,7 @@ def draw_overlay(
         f"Auto capture: {'ON' if auto_capture_enabled else 'OFF'} | Saved: {captures_saved}",
         f"FPS: {fps:.1f}",
         f"Status: {status_text}",
-        "Keys: q quit | r reset | c auto-capture",
+        "Keys: q quit | r reset | c auto-capture | s screenshot",
     ]
 
     cv2.rectangle(frame, (8, 8), (632, 220), (25, 25, 25), -1)
@@ -233,6 +248,7 @@ def draw_overlay(
 def main() -> None:
     """Run the real-time inference loop."""
     ensure_dirs()
+    setup_window(WINDOW_NAME)
     model, mean, std = load_model_and_scaler()
     detector = build_detector()
     cap = cv2.VideoCapture(0)
@@ -284,6 +300,7 @@ def main() -> None:
 
             stable_prediction = resolve_stable_prediction(prediction_window)
             countdown_remaining: Optional[float] = None
+            pending_auto_capture: tuple[int, float] | None = None
 
             if stable_prediction.label is not None:
                 if current_countdown_label != stable_prediction.label:
@@ -298,10 +315,11 @@ def main() -> None:
                     if countdown_remaining <= 0.0:
                         ready_for_capture = time.time() - last_capture_time >= CAPTURE_COOLDOWN_SECONDS
                         if auto_capture_enabled and ready_for_capture:
-                            filename = save_capture(raw_frame, stable_prediction.label, stable_prediction.confidence)
-                            captures_saved += 1
-                            last_capture_time = time.time()
-                            status_text = f"Captured {filename}"
+                            pending_auto_capture = (
+                                stable_prediction.label,
+                                stable_prediction.confidence,
+                            )
+                            status_text = "Stable prediction captured."
                         elif not auto_capture_enabled:
                             status_text = "Stable prediction ready, but auto-capture is OFF."
                         else:
@@ -336,7 +354,20 @@ def main() -> None:
                 fps,
                 status_text,
             )
-            cv2.imshow("Gesture-Controlled Smart Camera", frame)
+
+            if pending_auto_capture is not None:
+                capture_label, capture_confidence = pending_auto_capture
+                filename, screenshot_name = save_capture(
+                    raw_frame,
+                    frame,
+                    capture_label,
+                    capture_confidence,
+                )
+                captures_saved += 1
+                last_capture_time = time.time()
+                status_text = f"Captured {filename} and {screenshot_name}"
+
+            cv2.imshow(WINDOW_NAME, frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
@@ -349,6 +380,19 @@ def main() -> None:
             if key == ord("c"):
                 auto_capture_enabled = not auto_capture_enabled
                 status_text = f"Auto-capture {'enabled' if auto_capture_enabled else 'disabled'}."
+            if key == ord("s"):
+                if stable_prediction.label is None:
+                    status_text = "Manual capture requires a stable finger prediction."
+                else:
+                    filename, screenshot_name = save_capture(
+                        raw_frame,
+                        frame,
+                        stable_prediction.label,
+                        stable_prediction.confidence,
+                    )
+                    captures_saved += 1
+                    last_capture_time = time.time()
+                    status_text = f"Manual capture saved {filename} and {screenshot_name}."
 
     finally:
         cap.release()

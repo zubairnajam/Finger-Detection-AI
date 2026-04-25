@@ -1,0 +1,19 @@
+{
+  "train_samples": 17378,
+  "validation_samples": 3476,
+  "test_samples": 3500,
+  "feature_size": 63,
+  "epochs_ran": 64,
+  "test_accuracy": 0.9757142857142858,
+  "class_weights": {
+    "0": 1.2647379912663756,
+    "1": 0.9739386296763346,
+    "2": 0.9622093023255814,
+    "3": 0.9610120282040647,
+    "4": 0.9511494252873564,
+    "5": 0.9511494252873564
+  },
+  "model_path": "models\\finger_count_model.keras",
+  "scaler_path": "models\\feature_scaler.npz",
+  "rerun_note": "After collecting more samples, rerun preprocess_landmarks.py and then this script."
+}

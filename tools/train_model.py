@@ -2,9 +2,9 @@
 Train a finger-count classifier on MediaPipe landmark features.
 
 Usage:
-    python src/train_model.py
+    python tools/train_model.py
 
-This script expects the dataset created by src/preprocess_landmarks.py.
+This script expects the dataset created by tools/preprocess_landmarks.py.
 It is safe to rerun after collecting more data and rebuilding the dataset.
 """
 
@@ -25,14 +25,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TRAIN_DIR = PROJECT_ROOT / "data" / "train"
 TEST_DIR = PROJECT_ROOT / "data" / "test"
 MODELS_DIR = PROJECT_ROOT / "models"
-OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+OUTPUTS_DIR = PROJECT_ROOT / "outputs" / "training"
 
 RANDOM_STATE = 42
 BATCH_SIZE = 8
 EPOCHS = 100
 VALIDATION_SPLIT = 0.2
 LEARNING_RATE = 1e-3
-LABELS = [1, 2, 3, 4, 5]
+LABELS = [0, 1, 2, 3, 4, 5]
 
 
 def set_seed() -> None:
@@ -86,6 +86,16 @@ def build_model(input_dim: int, num_classes: int) -> tf.keras.Model:
         metrics=["accuracy"],
     )
     return model
+
+
+def build_class_weights(labels: np.ndarray) -> dict[int, float]:
+    """Balance training contribution when some labels are much rarer than others."""
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    total_samples = int(counts.sum())
+    return {
+        int(label): float(total_samples / (len(unique_labels) * count))
+        for label, count in zip(unique_labels, counts)
+    }
 
 
 def plot_training_curves(history: tf.keras.callbacks.History, output_path: Path) -> None:
@@ -155,6 +165,7 @@ def main() -> None:
     )
 
     model = build_model(input_dim=x_train_scaled.shape[1], num_classes=len(LABELS))
+    class_weights = build_class_weights(y_fit)
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             monitor="val_loss",
@@ -171,16 +182,17 @@ def main() -> None:
 
     history = model.fit(
         x_fit,
-        y_fit - 1,
-        validation_data=(x_val, y_val - 1),
+        y_fit,
+        validation_data=(x_val, y_val),
         epochs=EPOCHS,
         batch_size=BATCH_SIZE,
         verbose=0,
         callbacks=callbacks,
+        class_weight=class_weights,
     )
 
     probabilities = model.predict(x_test_scaled, verbose=0)
-    y_pred = np.argmax(probabilities, axis=1) + 1
+    y_pred = np.argmax(probabilities, axis=1)
     test_accuracy = accuracy_score(y_test, y_pred)
 
     model_path = MODELS_DIR / "finger_count_model.keras"
@@ -207,9 +219,10 @@ def main() -> None:
         "feature_size": int(x_train.shape[1]),
         "epochs_ran": int(len(history.history["loss"])),
         "test_accuracy": float(test_accuracy),
+        "class_weights": {str(label): weight for label, weight in class_weights.items()},
         "model_path": str(model_path.relative_to(PROJECT_ROOT)),
         "scaler_path": str((MODELS_DIR / "feature_scaler.npz").relative_to(PROJECT_ROOT)),
-        "rerun_note": "After collecting more samples, rerun preprocess_landmarks.py and then this script.",
+        "rerun_note": "After collecting more samples, rerun tools/preprocess_landmarks.py and then this script.",
     }
     with (OUTPUTS_DIR / "training_summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)

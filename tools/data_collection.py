@@ -6,10 +6,10 @@ dataset can be reprocessed later. It also stores a sidecar JSON file containing
 the detected landmarks for that exact frame.
 
 Usage:
-    python src/data_collection.py
+    python tools/data_collection.py
 
 Controls:
-    1-5  Select the current finger-count label
+    0-5  Select the current finger-count label
     s    Save the current frame for the selected label
     a    Toggle auto-capture mode
     c    Clear the selected label
@@ -36,8 +36,10 @@ if TYPE_CHECKING:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "hand_landmarker.task"
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
-VALID_LABELS = ("1", "2", "3", "4", "5")
+VALID_LABELS = tuple(str(label) for label in range(6))
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp"}
 AUTO_CAPTURE_INTERVAL_SECONDS = 0.7
+WINDOW_NAME = "Finger Count Data Collection"
 
 
 @dataclass
@@ -51,6 +53,15 @@ def ensure_directories() -> None:
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     for label in VALID_LABELS:
         (RAW_DATA_DIR / label).mkdir(parents=True, exist_ok=True)
+
+
+def setup_window(window_name: str) -> None:
+    """Open the OpenCV preview window in full-screen mode."""
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    try:
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    except cv2.error:
+        pass
 
 
 def build_detector() -> HandLandmarker:
@@ -77,7 +88,11 @@ def count_saved_samples() -> Dict[str, int]:
     counts: Dict[str, int] = {}
     for label in VALID_LABELS:
         label_dir = RAW_DATA_DIR / label
-        counts[label] = sum(1 for path in label_dir.iterdir() if path.is_file())
+        counts[label] = sum(
+            1
+            for path in label_dir.iterdir()
+            if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+        )
     return counts
 
 
@@ -111,7 +126,7 @@ def draw_overlay(
     lines = [
         f"Selected label: {selected_label or 'None'}",
         f"Auto capture: {'ON' if auto_mode else 'OFF'}",
-        "Keys: 1-5 label | s save | a auto | c clear | q quit",
+        "Keys: 0-5 label | s save | a auto | c clear | q quit",
         f"Status: {status_message}",
         "Sample counts: " + "  ".join(f"{label}={sample_counts[label]}" for label in VALID_LABELS),
     ]
@@ -180,6 +195,7 @@ def save_frame(
 def main() -> None:
     """Run the interactive webcam data collection loop."""
     ensure_directories()
+    setup_window(WINDOW_NAME)
     detector = build_detector()
     cap = cv2.VideoCapture(0)
 
@@ -190,12 +206,12 @@ def main() -> None:
     selected_label: Optional[str] = None
     auto_mode = False
     last_auto_capture_time = 0.0
-    status_message = "Ready. Select a label with keys 1-5."
+    status_message = "Ready. Select a label with keys 0-5."
     frame_count = 0
     sample_counts = count_saved_samples()
 
     print("Phase 2 data collection started.")
-    print("Select a label with keys 1-5, then press 's' to save or 'a' for auto-capture.")
+    print("Select a label with keys 0-5, then press 's' to save or 'a' for auto-capture.")
     print("Press 'q' to quit.")
 
     try:
@@ -236,7 +252,7 @@ def main() -> None:
                     last_auto_capture_time = current_time
 
             draw_overlay(frame, selected_label, auto_mode, status_message, sample_counts)
-            cv2.imshow("Finger Count Data Collection", frame)
+            cv2.imshow(WINDOW_NAME, frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
