@@ -1,0 +1,402 @@
+[
+  {
+    "image_path": "data\\raw\\1\\20260424_234029_1777056029019840100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234031_1777056031434180900.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234040_1777056040236746300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234053_1777056053731081500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234056_1777056056396135800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234058_1777056058466652400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234101_1777056061485495900.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234105_1777056065814550500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234117_1777056077950584600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234125_1777056085196146800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234130_1777056090381398100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234134_1777056094229018000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234136_1777056096919957700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234139_1777056099376389800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234147_1777056107364175300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234150_1777056110311736600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234202_1777056122166322400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234206_1777056126574759700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234225_1777056145467781900.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\1\\20260424_234230_1777056150581998500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233618_1777055778972157500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233628_1777055788086334000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233633_1777055793579126200.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233645_1777055805202007100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233655_1777055815095720400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233700_1777055820174369700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233713_1777055833171273800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233717_1777055837749746500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233721_1777055841348373000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233727_1777055847875189700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233734_1777055854788127500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233738_1777055858027032500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233750_1777055870082270300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233751_1777055871842204400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233814_1777055894228060500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233819_1777055899581476300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233838_1777055918760690100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233842_1777055922298854200.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_233855_1777055935563686200.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\2\\20260424_234018_1777056018837007200.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234239_1777056159724628000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234243_1777056163154780300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234244_1777056164959427100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234247_1777056167652309100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234249_1777056169144772600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234251_1777056171766439700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234253_1777056173342445700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234255_1777056175518057900.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234258_1777056178135649700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234300_1777056180278062800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234302_1777056182626218300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234304_1777056184703404500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234313_1777056193105512400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234316_1777056196102094400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234318_1777056198527084800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234320_1777056200499968700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234322_1777056202375813100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234326_1777056206862580000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234333_1777056213970879400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\3\\20260424_234338_1777056218379302700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234345_1777056225553477500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234349_1777056229439424800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234351_1777056231688731300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234355_1777056235445191700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234400_1777056240039820300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234402_1777056242107549500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234404_1777056244644335200.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234409_1777056249779392600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234410_1777056250987159100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234416_1777056256163534400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234459_1777056299314854400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234512_1777056312443559100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234516_1777056316545952300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234519_1777056319905184500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234523_1777056323393189100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234524_1777056324808600800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234526_1777056326020078600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234528_1777056328898146800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234529_1777056329818265100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\4\\20260424_234532_1777056332158088500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234537_1777056337746796300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234539_1777056339757763300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234543_1777056343066296800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234544_1777056344864097800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234546_1777056346868167700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234549_1777056349045422400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234552_1777056352623361600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234554_1777056354473194800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234558_1777056358285398700.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234604_1777056364717484600.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234610_1777056370658638900.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234614_1777056374321668300.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234616_1777056376656858400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234619_1777056379704118000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234621_1777056381815039500.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234631_1777056391566461100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234635_1777056395568538800.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234641_1777056401320267000.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234646_1777056406056454400.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  },
+  {
+    "image_path": "data\\raw\\5\\20260424_234649_1777056409880031100.jpg",
+    "reason": "No hand landmarks detected and no usable sidecar found"
+  }
+]

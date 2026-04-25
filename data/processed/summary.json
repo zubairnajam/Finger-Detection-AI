@@ -1,0 +1,22 @@
+{
+  "raw_samples_per_label": {
+    "1": 59,
+    "2": 59,
+    "3": 59,
+    "4": 71,
+    "5": 71
+  },
+  "processed_samples_per_label": {
+    "1": 39,
+    "2": 39,
+    "3": 39,
+    "4": 51,
+    "5": 51
+  },
+  "processed_samples_total": 219,
+  "skipped_samples_total": 100,
+  "train_samples": 175,
+  "test_samples": 44,
+  "feature_size": 63,
+  "rerun_note": "Add more images to data/raw and rerun this script to rebuild the dataset."
+}

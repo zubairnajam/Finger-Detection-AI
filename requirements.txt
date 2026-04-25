@@ -1,0 +1,24 @@
+# Gesture-Controlled Smart Camera - Requirements
+# Python 3.13 recommended
+
+# Computer Vision & Hand Detection
+opencv-python==4.13.0.92
+mediapipe==0.10.33
+
+# Deep Learning Framework
+tensorflow==2.21.0
+keras==3.14.0
+
+# Data Processing
+numpy==2.4.4
+pandas==3.0.2
+
+# Machine Learning Utilities
+scikit-learn==1.8.0
+
+# Visualization
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# Additional utilities
+pillow==12.2.0
