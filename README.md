@@ -105,6 +105,11 @@ tools/                     Data pipeline & utilities
   dataset_health_check.py  Dataset diagnostics
   download_model.py        MediaPipe model downloader
 
+web/                       Browser-based demo site
+  index.html               Website structure
+  style.css                Dark-theme styling
+  app.js                   MediaPipe JS + finger counting
+
 docs/                      Documentation
   pipeline_diagram.md      Mermaid pipeline diagram
 
@@ -118,6 +123,9 @@ outputs/                   Training reports, evaluation, captures
 ```bash
 # Main app
 python src/final_camera_app.py
+
+# Web demo (open http://localhost:8765)
+python -m http.server 8765 --directory web
 
 # Evaluation & metrics
 python tools/evaluate_model.py
