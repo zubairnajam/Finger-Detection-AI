@@ -1,12 +1,60 @@
 /* ════════════════════════════════════════════════════════════
    Finger Detection Smart Camera — Web App
-   Uses MediaPipe Hand Landmarker (JS) + geometric finger counting
+   MediaPipe hand detection + TF.js trained model inference
    ════════════════════════════════════════════════════════════ */
 
 import {
   HandLandmarker,
   FilesetResolver,
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
+
+// TF.js is loaded via <script> tag in index.html (window.tf)
+// Trained model + scaler (loaded async if model/model.json exists)
+let tfModel = null;
+let scalerMean = null;
+let scalerScale = null;
+
+async function loadTFModel() {
+  try {
+    const modelResp = await fetch("model/model.json");
+    if (!modelResp.ok) return; // model not yet converted — fall back to geometric
+    tfModel = await tf.loadLayersModel("model/model.json");
+    // Warm up
+    const dummy = tf.zeros([1, 63]);
+    tfModel.predict(dummy).dispose();
+    dummy.dispose();
+    console.log("[TF.js] Trained model loaded.");
+
+    const scalerResp = await fetch("model/scaler.json");
+    if (scalerResp.ok) {
+      const s = await scalerResp.json();
+      scalerMean  = s.mean;
+      scalerScale = s.scale;
+      console.log("[TF.js] Scaler loaded.");
+    }
+  } catch (e) {
+    console.warn("[TF.js] Model not available, using geometric fallback.", e.message);
+    tfModel = null;
+  }
+}
+
+function predictWithModel(landmarks) {
+  if (!tfModel) return null;
+  // Flatten 21×3 landmarks → 63-element array
+  const features = landmarks.flatMap(lm => [lm.x, lm.y, lm.z]);
+  // Apply scaler if available
+  const normed = scalerMean
+    ? features.map((v, i) => (v - scalerMean[i]) / (scalerScale[i] || 1))
+    : features;
+  const input = tf.tensor2d([normed]);
+  const probs = tfModel.predict(input);
+  const probsArr = probs.dataSync();
+  input.dispose();
+  probs.dispose();
+  const label = probsArr.indexOf(Math.max(...probsArr));
+  const confidence = probsArr[label];
+  return { label, confidence };
+}
 
 // ── Constants ───────────────────────────────────────────────
 const WINDOW_SIZE = 8;
@@ -270,9 +318,21 @@ function processFrame() {
 
   if (handDetected) {
     const lm = results.landmarks[0];
-    const handedness = results.handednesses?.[0]?.[0]?.categoryName || "Right";
-    fingerResult = countFingers(lm, handedness);
-    rawConf = getFingerConfidence(lm);
+    if (tfModel) {
+      const pred = predictWithModel(lm);
+      if (pred) {
+        fingerResult = { count: pred.label, up: [false, false, false, false, false] };
+        rawConf = pred.confidence;
+      }
+    }
+    
+    // Fallback to geometric if tfModel fails or is missing
+    if (!tfModel || !fingerResult) {
+      const handedness = results.handednesses?.[0]?.[0]?.categoryName || "Right";
+      fingerResult = countFingers(lm, handedness);
+      rawConf = getFingerConfidence(lm);
+    }
+    
     addPrediction(fingerResult.count, rawConf);
     // No skeleton drawing — just clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -482,22 +542,53 @@ function deleteSelected() {
   renderModalGrid();
 }
 
-// ── Charts (results section) ────────────────────────────────
-function initCharts() {
+// ── Charts & metrics (loaded live from web/metrics.json) ─────
+async function loadMetricsAndInitCharts() {
+  // Fallback values (used if metrics.json not yet generated)
+  let m = {
+    accuracy: 97.57,
+    test_samples: 3500,
+    mean_latency_ms: 62.7,
+    f1_scores: [0.9927, 0.9824, 0.9573, 0.9573, 0.9737, 0.9943],
+    f1_labels: ["0 (Fist)", "1 (Index)", "2 (Peace)", "3 (Three)", "4 (Four)", "5 (Open Hand)"],
+    classes: [
+      {label:0,name:"Fist",     precision:0.9895,recall:0.9958,f1:0.9927,support:475},
+      {label:1,name:"Index",    precision:0.9816,recall:0.9832,f1:0.9824,support:596},
+      {label:2,name:"Peace",    precision:0.9581,recall:0.9565,f1:0.9573,support:598},
+      {label:3,name:"Three",    precision:0.9557,recall:0.9589,f1:0.9573,support:608},
+      {label:4,name:"Four",     precision:0.9785,recall:0.9689,f1:0.9737,support:611},
+      {label:5,name:"Open Hand",precision:0.9935,recall:0.9951,f1:0.9943,support:612},
+    ],
+  };
+
+  try {
+    const resp = await fetch("metrics.json?v=" + Date.now());
+    if (resp.ok) {
+      m = await resp.json();
+      console.log("[metrics] Loaded live metrics.json");
+    }
+  } catch (_) {
+    console.warn("[metrics] metrics.json not found, using built-in defaults.");
+  }
+
+  // ── Update stat cards ───────────────────────────────────
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setTxt("metric-accuracy",  m.accuracy.toFixed(1) + "%");
+  setTxt("metric-latency",   m.mean_latency_ms.toFixed(0) + "ms");
+  setTxt("metric-samples",   m.test_samples.toLocaleString());
+
+  // ── F1 bar chart ────────────────────────────────────────
   const f1Ctx = document.getElementById("f1-chart");
   if (f1Ctx) {
     new Chart(f1Ctx, {
       type: "bar",
       data: {
-        labels: ["0 (Fist)", "1 (Index)", "2 (Peace)", "3 (Three)", "4 (Four)", "5 (Open)"],
+        labels: m.f1_labels,
         datasets: [{
           label: "F1 Score",
-          data: [0.9927, 0.9824, 0.9573, 0.9573, 0.9737, 0.9943],
-          backgroundColor: [
-            "rgba(0, 212, 255, 0.7)", "rgba(0, 212, 255, 0.65)",
-            "rgba(0, 212, 255, 0.55)", "rgba(0, 212, 255, 0.55)",
-            "rgba(0, 212, 255, 0.62)", "rgba(0, 212, 255, 0.72)",
-          ],
+          data: m.f1_scores,
+          backgroundColor: m.f1_scores.map((_, i) =>
+            `rgba(0, 212, 255, ${0.55 + i * 0.03})`),
           borderColor: "rgba(0, 212, 255, 0.9)",
           borderWidth: 1,
           borderRadius: 6,
@@ -511,7 +602,8 @@ function initCharts() {
         },
         scales: {
           y: {
-            min: 0.94, max: 1.002,
+            min: Math.max(0, Math.min(...m.f1_scores) - 0.06),
+            max: 1.002,
             ticks: { color: "#94a3b8", callback: (v) => (v * 100).toFixed(0) + "%" },
             grid: { color: "rgba(255,255,255,0.04)" },
           },
@@ -524,7 +616,20 @@ function initCharts() {
     });
   }
 
-  // Confusion matrix
+  // ── Classification table ─────────────────────────────────
+  const tbody = document.getElementById("results-tbody");
+  if (tbody && m.classes) {
+    tbody.innerHTML = m.classes.map(c => `
+      <tr>
+        <td>${c.label} (${c.name})</td>
+        <td>${(c.precision * 100).toFixed(1)}%</td>
+        <td>${(c.recall * 100).toFixed(1)}%</td>
+        <td><strong>${(c.f1 * 100).toFixed(1)}%</strong></td>
+        <td>${c.support}</td>
+      </tr>`).join("");
+  }
+
+  // ── Confusion matrix (static — re-run evaluate_model.py for real data) ──
   const cmData = [
     [473, 0, 0, 2, 0, 0],
     [0, 586, 5, 3, 2, 0],
@@ -547,7 +652,7 @@ function initCharts() {
           : val > 0
             ? `rgba(255, 68, 102, ${(val / maxVal * 0.6).toFixed(2)})`
             : "rgba(255,255,255,0.02)";
-        cmEl.innerHTML += `<div class="cm-cell" style="background:${bg}" title="True ${r} → Pred ${c}: ${val}">${val}</div>`;
+        cmEl.innerHTML += `<div class="cm-cell" style="background:${bg}" title="True ${r} -> Pred ${c}: ${val}">${val}</div>`;
       }
     }
   }
@@ -619,6 +724,7 @@ ui.modalDownloadZip.addEventListener("click", downloadSelectedAsZip);
 ui.modalDeleteSelected.addEventListener("click", deleteSelected);
 
 // ── Init ────────────────────────────────────────────────────
-initCharts();
+loadTFModel();                   // load trained model in background
+loadMetricsAndInitCharts();      // fetch metrics.json + draw charts
 initScrollAnimations();
 initKeyboard();

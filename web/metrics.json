@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-04-27T17:29:48.735712+00:00",
+  "accuracy": 97.57,
+  "test_samples": 3500,
+  "mean_latency_ms": 62.7,
+  "p95_latency_ms": 75.2,
+  "classes": [
+    {
+      "label": 0,
+      "name": "Fist",
+      "precision": 0.98954,
+      "recall": 0.995789,
+      "f1": 0.992655,
+      "support": 475
+    },
+    {
+      "label": 1,
+      "name": "Index",
+      "precision": 0.981575,
+      "recall": 0.983221,
+      "f1": 0.982397,
+      "support": 596
+    },
+    {
+      "label": 2,
+      "name": "Peace",
+      "precision": 0.958124,
+      "recall": 0.956522,
+      "f1": 0.957322,
+      "support": 598
+    },
+    {
+      "label": 3,
+      "name": "Three",
+      "precision": 0.955738,
+      "recall": 0.958882,
+      "f1": 0.957307,
+      "support": 608
+    },
+    {
+      "label": 4,
+      "name": "Four",
+      "precision": 0.978512,
+      "recall": 0.968903,
+      "f1": 0.973684,
+      "support": 611
+    },
+    {
+      "label": 5,
+      "name": "Open Hand",
+      "precision": 0.993475,
+      "recall": 0.995098,
+      "f1": 0.994286,
+      "support": 612
+    }
+  ],
+  "train_accuracy": 97.57,
+  "train_epochs": null,
+  "model_parameters": null,
+  "f1_scores": [
+    0.992655,
+    0.982397,
+    0.957322,
+    0.957307,
+    0.973684,
+    0.994286
+  ],
+  "f1_labels": [
+    "0 (Fist)",
+    "1 (Index)",
+    "2 (Peace)",
+    "3 (Three)",
+    "4 (Four)",
+    "5 (Open Hand)"
+  ]
+}
