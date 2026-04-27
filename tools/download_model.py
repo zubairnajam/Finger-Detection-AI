@@ -1,5 +1,6 @@
 """
 Download the MediaPipe hand landmarker task file used by the project.
+Downloads the pre-trained MediaPipe hand landmark detection model (hand_landmarker.task) from Google. This is a setup script to ensure you have the base model needed for the project to work.
 
 Usage:
     python tools/download_model.py

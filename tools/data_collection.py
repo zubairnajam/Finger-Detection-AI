@@ -1,5 +1,6 @@
 """
 Webcam-based data collection tool for finger-count classification.
+Opens your webcam for live data collection. It lets you capture images of your hand showing 0 to 5 fingers and saves the raw images along with their extracted hand landmarks in your `data/raw` folder.
 
 The script saves the clean raw webcam frame, not the annotated preview, so the
 dataset can be reprocessed later. It also stores a sidecar JSON file containing

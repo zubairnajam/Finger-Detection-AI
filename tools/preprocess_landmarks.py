@@ -1,5 +1,6 @@
 """
 Extract MediaPipe hand landmarks from local raw captures and archive images.
+Takes the raw images you captured (and any archived images), extracts the 3D coordinates (x, y, z) of your hand landmarks using MediaPipe, and processes them into structured feature arrays (.npy and .csv files). These files are split into training and testing sets inside the data directory.
 
 This script is intentionally rerunnable: whenever you add more images to
 data/raw or place more samples inside archive/, run it again and it will

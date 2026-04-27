@@ -1,5 +1,6 @@
 """
 Quick dataset inspection for raw captures and processed landmark outputs.
+A diagnostic tool. It counts the number of images and landmark datasets you have collected or processed, making it easy to see if your dataset is balanced or if you need to gather more images for a specific finger count (0-5).
 
 Usage:
     python tools/dataset_health_check.py

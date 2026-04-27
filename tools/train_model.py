@@ -1,5 +1,6 @@
 """
 Train a finger-count classifier on MediaPipe landmark features.
+Uses TensorFlow/Keras to build and train a neural network (MLP) on the landmarks extracted by the preprocessor. It outputs a trained model (finger_count_model.keras), along with a scaler and evaluation metrics like a confusion matrix to the outputs directory.
 
 Usage:
     python tools/train_model.py
