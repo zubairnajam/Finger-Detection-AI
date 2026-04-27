@@ -142,9 +142,29 @@
     <!-- Controls bar -->
     <div class="demo-controls glass-panel">
       <button class="btn btn-accent" id="btn-capture" disabled>📸 Capture</button>
-      <button class="btn btn-outline-sm" id="btn-cancel" disabled>✕ Cancel</button>
-      <button class="btn btn-outline-sm" id="btn-reset" disabled>↺ Reset</button>
+      <button class="btn btn-outline-sm btn-danger" id="btn-stop-camera" disabled>⏹ Stop Camera</button>
+      <button class="btn btn-outline-sm" id="btn-manage-photos" disabled>🗂️ Manage Photos</button>
       <span class="control-hint">Hold up 1–5 fingers for countdown • SPACE to snap</span>
+    </div>
+
+    <!-- Photo manager modal -->
+    <div class="modal-backdrop hidden" id="photo-modal">
+      <div class="modal glass-panel">
+        <div class="modal-header">
+          <h3>Manage Photos</h3>
+          <button class="btn-icon" id="modal-close">✕</button>
+        </div>
+        <div class="modal-actions-top">
+          <button class="btn btn-outline-sm" id="modal-select-all">Select All</button>
+          <button class="btn btn-outline-sm" id="modal-deselect-all">Deselect All</button>
+          <span class="modal-count" id="modal-count">0 selected</span>
+        </div>
+        <div class="modal-grid" id="modal-grid"></div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="modal-download-zip" disabled>⬇ Download as ZIP</button>
+          <button class="btn btn-outline-sm btn-danger" id="modal-delete-selected" disabled>🗑 Delete Selected</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -322,6 +342,7 @@
     </div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>

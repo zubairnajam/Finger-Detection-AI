@@ -6,7 +6,6 @@
 import {
   HandLandmarker,
   FilesetResolver,
-  DrawingUtils,
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
 
 // ── Constants ───────────────────────────────────────────────
@@ -15,21 +14,14 @@ const MIN_VOTES = 4;
 const MIN_CONFIDENCE = 0.55;
 const CIRCUMFERENCE = 2 * Math.PI * 90; // countdown ring
 
-// MediaPipe hand connections for drawing
-const HAND_CONNECTIONS = [
-  [0,1],[1,2],[2,3],[3,4],
-  [0,5],[5,6],[6,7],[7,8],
-  [5,9],[9,10],[10,11],[11,12],
-  [9,13],[13,14],[14,15],[15,16],
-  [13,17],[17,18],[18,19],[19,20],
-  [0,17],
-];
-
 // ── State ───────────────────────────────────────────────────
 let handLandmarker = null;
 let webcamRunning = false;
 let lastVideoTime = -1;
 let animationFrameId = null;
+
+// All captured photos stored here: { id, dataUrl, timestamp }
+const capturedPhotos = [];
 
 const state = {
   predictionWindow: [],
@@ -71,8 +63,17 @@ const ui = {
   galleryGrid: $("#gallery-grid"),
   btnStart: $("#btn-start-camera"),
   btnCapture: $("#btn-capture"),
-  btnCancel: $("#btn-cancel"),
-  btnReset: $("#btn-reset"),
+  btnStopCamera: $("#btn-stop-camera"),
+  btnManagePhotos: $("#btn-manage-photos"),
+  // Modal
+  photoModal: $("#photo-modal"),
+  modalGrid: $("#modal-grid"),
+  modalClose: $("#modal-close"),
+  modalSelectAll: $("#modal-select-all"),
+  modalDeselectAll: $("#modal-deselect-all"),
+  modalCount: $("#modal-count"),
+  modalDownloadZip: $("#modal-download-zip"),
+  modalDeleteSelected: $("#modal-delete-selected"),
 };
 
 // ── Finger Counting (geometric heuristic) ───────────────────
@@ -101,7 +102,6 @@ function countFingers(landmarks, handedness) {
 }
 
 function getFingerConfidence(landmarks) {
-  // Confidence based on how "clearly" fingers are up or down
   const tips = [8, 12, 16, 20];
   const pips = [6, 10, 14, 18];
   let clarity = 0;
@@ -163,13 +163,12 @@ function getCountdownRemaining() {
 
 // ── Capture ─────────────────────────────────────────────────
 function capturePhoto() {
-  // Draw current frame to an offscreen canvas
   const offscreen = document.createElement("canvas");
   offscreen.width = video.videoWidth;
   offscreen.height = video.videoHeight;
   const offCtx = offscreen.getContext("2d");
   offCtx.translate(offscreen.width, 0);
-  offCtx.scale(-1, 1); // mirror
+  offCtx.scale(-1, 1);
   offCtx.drawImage(video, 0, 0);
   const dataUrl = offscreen.toDataURL("image/jpeg", 0.92);
 
@@ -181,52 +180,23 @@ function capturePhoto() {
   ui.captures.textContent = state.captureCount;
   state.statusText = `Photo #${state.captureCount} captured!`;
 
-  // Gallery thumbnail
-  const img = document.createElement("img");
-  img.src = dataUrl;
-  img.title = `Capture #${state.captureCount}`;
-  img.addEventListener("click", () => {
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `capture_${state.captureCount}.jpg`;
-    a.click();
-  });
-  ui.galleryGrid.prepend(img);
-  // Keep last 6
-  while (ui.galleryGrid.children.length > 6) ui.galleryGrid.lastChild.remove();
+  // Store photo
+  const photoId = Date.now();
+  const timestamp = new Date().toLocaleTimeString();
+  capturedPhotos.push({ id: photoId, dataUrl, timestamp, name: `capture_${state.captureCount}.jpg` });
+
+  // Gallery thumbnail (sidebar — keep last 6)
+  refreshGalleryThumbnails();
 }
 
-// ── Drawing ─────────────────────────────────────────────────
-function drawHandLandmarks(landmarks) {
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-
-  // Connections
-  ctx.strokeStyle = "rgba(0, 212, 255, 0.5)";
-  ctx.lineWidth = 2;
-  for (const [a, b] of HAND_CONNECTIONS) {
-    ctx.beginPath();
-    ctx.moveTo(landmarks[a].x * w, landmarks[a].y * h);
-    ctx.lineTo(landmarks[b].x * w, landmarks[b].y * h);
-    ctx.stroke();
-  }
-
-  // Landmarks
-  for (let i = 0; i < landmarks.length; i++) {
-    const x = landmarks[i].x * w;
-    const y = landmarks[i].y * h;
-    const isTip = [4, 8, 12, 16, 20].includes(i);
-    const radius = isTip ? 5 : 3;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = isTip ? "#00ff88" : "#00d4ff";
-    ctx.fill();
-    if (isTip) {
-      ctx.strokeStyle = "rgba(0, 255, 136, 0.3)";
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
+function refreshGalleryThumbnails() {
+  ui.galleryGrid.innerHTML = "";
+  const recent = capturedPhotos.slice(-6).reverse();
+  for (const photo of recent) {
+    const img = document.createElement("img");
+    img.src = photo.dataUrl;
+    img.title = photo.name;
+    ui.galleryGrid.appendChild(img);
   }
 }
 
@@ -259,7 +229,6 @@ function updateUI(fingerResult, rawConf, stablePred, handDetected) {
     const fraction = remaining / state.countdownDuration;
     const offset = CIRCUMFERENCE * fraction;
     ui.countdownRing.style.strokeDashoffset = offset;
-    // Colour shift
     const color = fraction > 0.5 ? "#00ff88" : fraction > 0.2 ? "#ffbb33" : "#ff4466";
     ui.countdownRing.style.stroke = color;
     ui.countdownNumber.style.color = color;
@@ -305,7 +274,8 @@ function processFrame() {
     fingerResult = countFingers(lm, handedness);
     rawConf = getFingerConfidence(lm);
     addPrediction(fingerResult.count, rawConf);
-    drawHandLandmarks(lm);
+    // No skeleton drawing — just clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!state.countdownActive) state.statusText = "Gesture detected";
   } else {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -372,7 +342,7 @@ async function initHandLandmarker() {
   });
 }
 
-// ── Camera start ────────────────────────────────────────────
+// ── Camera start / stop ─────────────────────────────────────
 async function startCamera() {
   ui.placeholder.classList.add("hidden");
   ui.loading.classList.remove("hidden");
@@ -389,10 +359,9 @@ async function startCamera() {
     webcamRunning = true;
     state.statusText = "Camera ready";
     ui.btnCapture.disabled = false;
-    ui.btnCancel.disabled = false;
-    ui.btnReset.disabled = false;
+    ui.btnStopCamera.disabled = false;
+    ui.btnManagePhotos.disabled = false;
 
-    // Set countdown ring dasharray
     ui.countdownRing.style.strokeDasharray = CIRCUMFERENCE;
     ui.countdownRing.style.strokeDashoffset = 0;
 
@@ -405,9 +374,116 @@ async function startCamera() {
   }
 }
 
+function stopCamera() {
+  webcamRunning = false;
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+  // Stop all tracks
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach((t) => t.stop());
+    video.srcObject = null;
+  }
+
+  cancelCountdown();
+  state.predictionWindow = [];
+  state.lastCommittedLabel = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ui.btnCapture.disabled = true;
+  ui.btnStopCamera.disabled = true;
+  ui.placeholder.classList.remove("hidden");
+  state.statusText = "Camera stopped";
+  ui.status.textContent = state.statusText;
+}
+
+// ── Photo Manager Modal ─────────────────────────────────────
+function openPhotoModal() {
+  ui.photoModal.classList.remove("hidden");
+  renderModalGrid();
+}
+
+function closePhotoModal() {
+  ui.photoModal.classList.add("hidden");
+}
+
+function renderModalGrid() {
+  ui.modalGrid.innerHTML = "";
+
+  if (capturedPhotos.length === 0) {
+    ui.modalGrid.innerHTML = '<div class="modal-empty">No photos captured yet.</div>';
+    updateModalButtons();
+    return;
+  }
+
+  for (const photo of capturedPhotos) {
+    const thumb = document.createElement("div");
+    thumb.className = "modal-thumb";
+    thumb.dataset.id = photo.id;
+    thumb.innerHTML = `
+      <img src="${photo.dataUrl}" alt="${photo.name}">
+      <span class="thumb-check">✓</span>
+      <span class="thumb-label">${photo.name}</span>
+    `;
+    thumb.addEventListener("click", () => {
+      thumb.classList.toggle("selected");
+      updateModalButtons();
+    });
+    ui.modalGrid.appendChild(thumb);
+  }
+  updateModalButtons();
+}
+
+function updateModalButtons() {
+  const selected = ui.modalGrid.querySelectorAll(".modal-thumb.selected");
+  const count = selected.length;
+  ui.modalCount.textContent = `${count} selected`;
+  ui.modalDownloadZip.disabled = count === 0;
+  ui.modalDeleteSelected.disabled = count === 0;
+}
+
+function getSelectedIds() {
+  return [...ui.modalGrid.querySelectorAll(".modal-thumb.selected")]
+    .map((el) => parseInt(el.dataset.id));
+}
+
+async function downloadSelectedAsZip() {
+  const selectedIds = new Set(getSelectedIds());
+  if (selectedIds.size === 0) return;
+
+  const zip = new JSZip();
+  for (const photo of capturedPhotos) {
+    if (!selectedIds.has(photo.id)) continue;
+    // Convert data URL to binary
+    const base64 = photo.dataUrl.split(",")[1];
+    zip.file(photo.name, base64, { base64: true });
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `finger_detect_captures_${Date.now()}.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function deleteSelected() {
+  const selectedIds = new Set(getSelectedIds());
+  if (selectedIds.size === 0) return;
+
+  // Remove from array
+  for (let i = capturedPhotos.length - 1; i >= 0; i--) {
+    if (selectedIds.has(capturedPhotos[i].id)) capturedPhotos.splice(i, 1);
+  }
+
+  state.captureCount = capturedPhotos.length;
+  ui.captures.textContent = state.captureCount;
+  refreshGalleryThumbnails();
+  renderModalGrid();
+}
+
 // ── Charts (results section) ────────────────────────────────
 function initCharts() {
-  // F1 bar chart
   const f1Ctx = document.getElementById("f1-chart");
   if (f1Ctx) {
     new Chart(f1Ctx, {
@@ -459,16 +535,13 @@ function initCharts() {
   ];
   const cmEl = document.getElementById("confusion-matrix");
   if (cmEl) {
-    // Header row
     cmEl.innerHTML = '<div class="cm-header"></div>';
     for (let c = 0; c < 6; c++) cmEl.innerHTML += `<div class="cm-header">${c}</div>`;
-    // Data rows
     const maxVal = 612;
     for (let r = 0; r < 6; r++) {
       cmEl.innerHTML += `<div class="cm-header">${r}</div>`;
       for (let c = 0; c < 6; c++) {
         const val = cmData[r][c];
-        const intensity = r === c ? Math.round((val / maxVal) * 200 + 55) : Math.min(Math.round((val / maxVal) * 180), 180);
         const bg = r === c
           ? `rgba(0, 212, 255, ${(val / maxVal * 0.7 + 0.15).toFixed(2)})`
           : val > 0
@@ -485,16 +558,13 @@ function initScrollAnimations() {
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-        }
+        if (entry.isIntersecting) entry.target.classList.add("visible");
       });
     },
     { threshold: 0.15 }
   );
   document.querySelectorAll("[data-animate]").forEach((el) => observer.observe(el));
 
-  // Nav background on scroll
   const nav = document.getElementById("main-nav");
   window.addEventListener("scroll", () => {
     nav.classList.toggle("scrolled", window.scrollY > 60);
@@ -504,6 +574,11 @@ function initScrollAnimations() {
 // ── Keyboard shortcuts ──────────────────────────────────────
 function initKeyboard() {
   document.addEventListener("keydown", (e) => {
+    // Don't trigger shortcuts when modal is open
+    if (!ui.photoModal.classList.contains("hidden")) {
+      if (e.key === "Escape") closePhotoModal();
+      return;
+    }
     if (!webcamRunning) return;
     if (e.code === "Space" || e.key === "s") {
       e.preventDefault();
@@ -512,8 +587,6 @@ function initKeyboard() {
       state.lastCommittedLabel = null;
       capturePhoto();
     }
-    if (e.key === "x") { cancelCountdown(); state.predictionWindow = []; state.lastCommittedLabel = null; state.statusText = "Cancelled"; }
-    if (e.key === "r") { cancelCountdown(); state.predictionWindow = []; state.lastCommittedLabel = null; state.statusText = "Reset"; }
   });
 }
 
@@ -526,18 +599,24 @@ ui.btnCapture.addEventListener("click", () => {
   state.lastCommittedLabel = null;
   capturePhoto();
 });
-ui.btnCancel.addEventListener("click", () => {
-  cancelCountdown();
-  state.predictionWindow = [];
-  state.lastCommittedLabel = null;
-  state.statusText = "Cancelled";
+ui.btnStopCamera.addEventListener("click", stopCamera);
+ui.btnManagePhotos.addEventListener("click", openPhotoModal);
+
+// Modal events
+ui.modalClose.addEventListener("click", closePhotoModal);
+ui.photoModal.addEventListener("click", (e) => {
+  if (e.target === ui.photoModal) closePhotoModal();
 });
-ui.btnReset.addEventListener("click", () => {
-  cancelCountdown();
-  state.predictionWindow = [];
-  state.lastCommittedLabel = null;
-  state.statusText = "Reset";
+ui.modalSelectAll.addEventListener("click", () => {
+  ui.modalGrid.querySelectorAll(".modal-thumb").forEach((t) => t.classList.add("selected"));
+  updateModalButtons();
 });
+ui.modalDeselectAll.addEventListener("click", () => {
+  ui.modalGrid.querySelectorAll(".modal-thumb").forEach((t) => t.classList.remove("selected"));
+  updateModalButtons();
+});
+ui.modalDownloadZip.addEventListener("click", downloadSelectedAsZip);
+ui.modalDeleteSelected.addEventListener("click", deleteSelected);
 
 // ── Init ────────────────────────────────────────────────────
 initCharts();
