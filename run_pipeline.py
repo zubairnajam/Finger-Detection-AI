@@ -59,7 +59,7 @@ def main():
     # Web sync stages
     web_stages = [
         ("tools/sync_web_metrics.py",       False),  # required — writes web/metrics.json
-        ("tools/convert_model_to_tfjs.py",  True),   # optional — needs: pip install tensorflowjs
+        ("tools/convert_model_to_tfjs.py",  False),   # optional — needs: pip install tensorflowjs
     ]
 
     for script in core_stages:

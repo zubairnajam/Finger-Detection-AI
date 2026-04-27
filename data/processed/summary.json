@@ -9,11 +9,11 @@
   ],
   "local_raw_images_per_label": {
     "0": 0,
-    "1": 69,
-    "2": 74,
-    "3": 78,
-    "4": 76,
-    "5": 77
+    "1": 140,
+    "2": 124,
+    "3": 125,
+    "4": 120,
+    "5": 115
   },
   "archive_images_per_split_per_label": {
     "train": {
@@ -35,45 +35,45 @@
   },
   "processed_samples_per_label": {
     "0": 2765,
-    "1": 3570,
-    "2": 3608,
-    "3": 3622,
-    "4": 3656,
-    "5": 3657
+    "1": 3641,
+    "2": 3658,
+    "3": 3669,
+    "4": 3700,
+    "5": 3695
   },
   "train_samples_per_label": {
     "0": 2290,
-    "1": 2974,
-    "2": 3010,
-    "3": 3014,
-    "4": 3045,
-    "5": 3045
+    "1": 3030,
+    "2": 3050,
+    "3": 3052,
+    "4": 3080,
+    "5": 3076
   },
   "test_samples_per_label": {
     "0": 475,
-    "1": 596,
-    "2": 598,
-    "3": 608,
-    "4": 611,
-    "5": 612
+    "1": 611,
+    "2": 608,
+    "3": 617,
+    "4": 620,
+    "5": 619
   },
   "processed_samples_per_variant": {
     "original": 13032,
     "rescue_white_pad": 6364,
     "rescue_white_pad_rot_12": 1002,
     "rescue_white_pad_rot_neg_12": 206,
-    "sidecar": 274
+    "sidecar": 524
   },
   "processed_samples_per_source": {
-    "local_raw_train": 222,
-    "local_raw_test": 56,
+    "local_raw_train": 422,
+    "local_raw_test": 106,
     "archive_train": 17156,
     "archive_test": 3444
   },
-  "processed_samples_total": 20878,
+  "processed_samples_total": 21128,
   "skipped_samples_total": 1096,
-  "train_samples": 17378,
-  "test_samples": 3500,
+  "train_samples": 17578,
+  "test_samples": 3550,
   "feature_size": 63,
   "rerun_note": "Add more images to data/raw or archive and rerun this script to rebuild the dataset."
 }

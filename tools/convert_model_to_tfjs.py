@@ -29,6 +29,15 @@ SCALER_JSON  = PROJECT_ROOT / "web" / "model" / "scaler.json"
 
 def check_tensorflowjs():
     try:
+        import numpy as np
+        np.object = object
+        np.bool = np.bool_
+        np.complex = complex
+        
+        import sys
+        from unittest.mock import MagicMock
+        sys.modules['tensorflow_hub'] = MagicMock()
+
         import tensorflowjs  # noqa: F401
     except ImportError:
         print("[ERROR] tensorflowjs is not installed.")
@@ -48,20 +57,49 @@ def convert_model():
 
     TFJS_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    wrapper_path = PROJECT_ROOT / "tfjs_wrapper.py"
+    wrapper_path.write_text(
+        "import sys\n"
+        "import numpy as np\n"
+        "np.object = object\n"
+        "np.bool = np.bool_\n"
+        "np.complex = complex\n"
+        "from unittest.mock import MagicMock\n"
+        "sys.modules['tensorflow_hub'] = MagicMock()\n"
+        "import tensorflow as tf\n"
+        "import tensorflowjs as tfjs\n"
+        "import tensorflowjs.converters.keras_h5_conversion as cvt\n"
+        "cvt._check_version = lambda h5file: None\n"
+        "model = tf.keras.models.load_model(sys.argv[1])\n"
+        "tfjs.converters.save_keras_model(model, sys.argv[2])\n"
+    )
+
     result = subprocess.run(
         [
-            sys.executable, "-m", "tensorflowjs.converters.converter",
-            "--input_format=keras",
+            sys.executable,
+            str(wrapper_path),
             str(MODEL_PATH),
             str(TFJS_OUT_DIR),
         ],
         capture_output=True,
         text=True,
     )
+    if wrapper_path.exists():
+        wrapper_path.unlink()
+
     if result.returncode != 0:
         print("[ERROR] Conversion failed:")
         print(result.stderr)
         sys.exit(1)
+
+    # FIX: TF.js v3.18/v4 converter has a bug with Keras 3 models where it exports "batch_shape" 
+    # instead of "batchInputShape" for the InputLayer, causing a load failure in the browser.
+    model_json_path = TFJS_OUT_DIR / "model.json"
+    if model_json_path.exists():
+        content = model_json_path.read_text(encoding="utf-8")
+        content = content.replace('"batch_shape":', '"batchInputShape":')
+        model_json_path.write_text(content, encoding="utf-8")
+
     print("      ✓ Model converted successfully")
 
 

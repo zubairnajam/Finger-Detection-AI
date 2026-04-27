@@ -1,7 +1,7 @@
 __pycache__/
 *.pyc
 *.pyo
-
+/data/
 /archive/
 /outputs/final_camera/
 /outputs/legacy_captures/
