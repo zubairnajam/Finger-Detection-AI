@@ -1,6 +1,80 @@
 {
   "test_samples": 3550,
   "accuracy": 0.9771830985915493,
+  "macro_avg": {
+    "precision": 0.9775199716381292,
+    "recall": 0.9778586741578187,
+    "f1_score": 0.977674444138112
+  },
+  "per_source": {
+    "archive": {
+      "samples": 3444,
+      "accuracy": 0.9796747967479674
+    },
+    "webcam": {
+      "samples": 106,
+      "accuracy": 0.8962264150943396
+    }
+  },
+  "confusion_matrix": [
+    [
+      473,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      599,
+      11,
+      1,
+      0,
+      0
+    ],
+    [
+      6,
+      7,
+      586,
+      6,
+      3,
+      0
+    ],
+    [
+      0,
+      3,
+      14,
+      588,
+      10,
+      2
+    ],
+    [
+      0,
+      0,
+      0,
+      13,
+      606,
+      1
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      1,
+      617
+    ]
+  ],
+  "model_parameters": 18726,
+  "class_names": {
+    "0": "Fist",
+    "1": "Index",
+    "2": "Peace",
+    "3": "Three",
+    "4": "Four",
+    "5": "Open Hand"
+  },
   "per_class": {
     "0": {
       "precision": 0.9874739039665971,
@@ -41,18 +115,29 @@
   },
   "latency": {
     "n_runs": 1000,
-    "mean_ms": 65.83580956980586,
-    "median_ms": 64.73544985055923,
-    "std_ms": 5.186473492351869,
-    "min_ms": 58.55040065944195,
-    "max_ms": 159.58529897034168,
-    "p95_ms": 74.2041847668588,
-    "p99_ms": 80.05142409354448
+    "mean_ms": 0.0365581000369275,
+    "median_ms": 0.032800002372823656,
+    "std_ms": 0.04049650554474518,
+    "min_ms": 0.031800009310245514,
+    "max_ms": 0.9873999952105805,
+    "p95_ms": 0.03950500904466025,
+    "p99_ms": 0.09012800219352354
+  },
+  "latency_backend": "numpy",
+  "latency_keras_predict": {
+    "n_runs": 200,
+    "mean_ms": 93.87478499978897,
+    "median_ms": 77.93689999380149,
+    "std_ms": 52.02520020974757,
+    "min_ms": 65.22699999914039,
+    "max_ms": 490.4398999933619,
+    "p95_ms": 148.93517000818963,
+    "p99_ms": 322.5230209949937
   },
   "approach": {
     "hand_detection": "MediaPipe Hand Landmarker (float16)",
     "feature_extraction": "21 3D landmarks \u2192 63 features (x, y, z)",
-    "classifier": "TensorFlow/Keras MLP (128 \u2192 64 \u2192 32 \u2192 6, softmax)",
+    "classifier": "TensorFlow/Keras MLP (128 \u2192 64 \u2192 32 \u2192 6, softmax), served by a NumPy engine",
     "stabilisation": "Rolling-window majority vote (8-frame window, min 4 votes, min 55% confidence)"
   }
 }

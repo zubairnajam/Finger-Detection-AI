@@ -2,13 +2,15 @@
 Final deliverable camera app with manual shutter and gesture-driven countdown.
 
 Usage:
-    python src/final_camera_app.py
+    python src/final_camera_app.py [--camera 0] [--width 1280 --height 720]
+                                   [--windowed] [--backend numpy|keras]
 
 Controls:
     SPACE / s  Take an instant photo like a normal camera
     x          Cancel the active countdown
     r          Reset gesture history and countdown state
-    q          Quit
+    h          Show / hide the HUD
+    q / ESC    Quit
 
 Gesture mode:
     Hold up 1-5 fingers steadily to start a countdown for that many seconds.
@@ -17,12 +19,13 @@ Gesture mode:
 
 from __future__ import annotations
 
+import argparse
+import json
+import logging
 import sys
-from collections import deque
+import time
 from pathlib import Path
 from typing import Optional
-import json
-import time
 
 import cv2
 import mediapipe as mp
@@ -34,20 +37,24 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.config import (
-    CAPTURE_COOLDOWN_SECONDS,
     CAPTURE_DIR,
     FLASH_DURATION_SECONDS,
     FRAME_TIME_MS,
+    LABELS,
     PROJECT_ROOT,
-    ROLLING_WINDOW_SIZE,
     WINDOW_NAME,
     CaptureRequest,
-    CountdownState,
     StablePrediction,
 )
+from src.gesture_controller import GestureController
 from src.hand_detection import build_detector, flatten_landmarks
-from src.prediction import load_model_and_scaler, predict_finger_count, resolve_stable_prediction
-from src.ui_overlay import draw_camera_overlay, draw_flash_effect, draw_landmarks
+from src.prediction import BACKENDS, backend_name, load_model_and_scaler, predict_probabilities
+from src.ui_overlay import Telemetry, draw_camera_overlay, draw_flash_effect, draw_landmarks
+
+logger = logging.getLogger("smart_camera")
+
+EMA_ALPHA = 0.1  # smoothing for the on-screen timing readouts
+KEY_ESC = 27
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,13 +64,30 @@ def ensure_dirs() -> None:
     CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def setup_window(window_name: str) -> None:
-    """Open the camera preview window in full-screen mode when supported."""
+def setup_window(window_name: str, fullscreen: bool = True) -> None:
+    """Open the camera preview window, full-screen when supported and requested."""
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    if not fullscreen:
+        return
     try:
         cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     except cv2.error:
         pass
+
+
+def open_camera(index: int, width: Optional[int], height: Optional[int]) -> cv2.VideoCapture:
+    """Open a webcam and optionally request a capture resolution."""
+    cap = cv2.VideoCapture(index)
+    if not cap.isOpened():
+        raise RuntimeError(
+            f"Could not open webcam #{index}. Check that it is connected and not in use "
+            "by another application, or pick another device with --camera."
+        )
+    if width:
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    if height:
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    return cap
 
 
 def save_capture(
@@ -81,7 +105,8 @@ def save_capture(
     preview_path = CAPTURE_DIR / f"{stem}_preview.jpg"
     metadata_path = CAPTURE_DIR / f"{stem}.json"
 
-    cv2.imwrite(str(image_path), raw_frame_bgr)
+    if not cv2.imwrite(str(image_path), raw_frame_bgr):
+        raise OSError(f"Failed to write {image_path}")
     cv2.imwrite(str(preview_path), preview_frame_bgr)
 
     metadata = {
@@ -104,37 +129,67 @@ def save_capture(
     return image_path.name, preview_path.name
 
 
+def _ema(previous: float, sample: float) -> float:
+    return sample if previous == 0.0 else (1 - EMA_ALPHA) * previous + EMA_ALPHA * sample
+
+
+def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Gesture-controlled smart camera.")
+    parser.add_argument("--camera", type=int, default=0, help="Webcam device index (default: 0)")
+    parser.add_argument("--width", type=int, default=None, help="Requested capture width")
+    parser.add_argument("--height", type=int, default=None, help="Requested capture height")
+    parser.add_argument("--display-width", type=int, default=1280,
+                        help="Upscale small frames to this width for a crisp HUD (default: 1280)")
+    parser.add_argument("--windowed", action="store_true", help="Do not start in full-screen")
+    parser.add_argument("--backend", choices=BACKENDS, default="numpy",
+                        help="Classifier inference backend (default: numpy)")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
+    return parser.parse_args(argv)
+
+
 # ── Main loop ────────────────────────────────────────────────────────────────
 
-def main() -> None:
+def main(argv: Optional[list[str]] = None) -> None:
     """Run the final deliverable camera app."""
+    args = parse_args(argv)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s  %(levelname)-7s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
     ensure_dirs()
-    setup_window(WINDOW_NAME)
-    model, mean, std = load_model_and_scaler()
+    logger.info("Loading classifier (%s backend)...", args.backend)
+    model, mean, std = load_model_and_scaler(backend=args.backend)
+    engine = backend_name(model)
     detector = build_detector()
-    cap = cv2.VideoCapture(0)
-
-    if not cap.isOpened():
+    try:
+        cap = open_camera(args.camera, args.width, args.height)
+    except RuntimeError:
         detector.close()
-        raise RuntimeError("Could not open webcam.")
+        raise
 
-    prediction_window: deque[tuple[int, float]] = deque(maxlen=ROLLING_WINDOW_SIZE)
-    active_countdown: CountdownState | None = None
-    last_committed_gesture_label: Optional[int] = None
-    last_capture_time = 0.0
+    setup_window(WINDOW_NAME, fullscreen=not args.windowed)
+    controller = GestureController()
+    telemetry = Telemetry(backend=engine)
     flash_until = 0.0
     captures_saved = 0
-    status_text = "Press SPACE for an instant photo or hold up 1-5 fingers for a countdown."
     frame_count = 0
-    fps = 0.0
+    show_hud = True
+    window_seen_visible = False
     fps_timer_start = time.time()
     fps_frame_counter = 0
+    session_start = time.time()
+    detect_total_ms = 0.0
+    classify_total_ms = 0.0
+    classified_frames = 0
 
+    logger.info("Camera running. Press q or ESC to quit.")
     try:
         while True:
             ok, frame = cap.read()
             if not ok:
-                status_text = "Could not read webcam frame."
+                logger.error("Could not read a frame from the webcam; stopping.")
                 break
 
             frame = cv2.flip(frame, 1)
@@ -142,86 +197,45 @@ def main() -> None:
             frame_count += 1
             fps_frame_counter += 1
 
+            # ── Hand detection ──────────────────────────────────────────
+            t0 = time.perf_counter()
             rgb_frame = cv2.cvtColor(raw_frame, cv2.COLOR_BGR2RGB)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
             detection_result = detector.detect_for_video(mp_image, frame_count * FRAME_TIME_MS)
+            detect_ms = (time.perf_counter() - t0) * 1000.0
+            telemetry.detect_ms = _ema(telemetry.detect_ms, detect_ms)
+            detect_total_ms += detect_ms
 
             hand_detected = bool(detection_result.hand_landmarks)
             raw_prediction = None
             raw_confidence = 0.0
+            probabilities: Optional[np.ndarray] = None
             features = flatten_landmarks(detection_result)
 
+            # ── Classification ──────────────────────────────────────────
             if features is not None:
-                raw_prediction, raw_confidence = predict_finger_count(features, model, mean, std)
-                prediction_window.append((raw_prediction, raw_confidence))
-                if active_countdown is None:
-                    status_text = "Gesture detected. Hold steady to arm the countdown."
-            else:
-                prediction_window.clear()
-                if active_countdown is None:
-                    last_committed_gesture_label = None
-                    status_text = "Show 1-5 fingers for countdown, or press SPACE to snap."
+                t0 = time.perf_counter()
+                probabilities = predict_probabilities(features, model, mean, std)
+                classify_ms = (time.perf_counter() - t0) * 1000.0
+                telemetry.classify_ms = _ema(telemetry.classify_ms, classify_ms)
+                classify_total_ms += classify_ms
+                classified_frames += 1
+                predicted_index = int(np.argmax(probabilities))
+                raw_prediction = LABELS[predicted_index]
+                raw_confidence = float(probabilities[predicted_index])
 
-            stable_prediction = resolve_stable_prediction(prediction_window)
-            pending_capture: CaptureRequest | None = None
-            countdown_remaining: Optional[float] = None
-            now = time.time()
-
-            # ── Gesture state machine ───────────────────────────────────
-            if stable_prediction.label == 0:
-                last_committed_gesture_label = None
-                if active_countdown is not None:
-                    active_countdown = None
-                    status_text = "Countdown cancelled by 0-finger gesture."
-            elif stable_prediction.label in {1, 2, 3, 4, 5}:
-                if active_countdown is None:
-                    if stable_prediction.label != last_committed_gesture_label:
-                        active_countdown = CountdownState(
-                            label=stable_prediction.label,
-                            duration_seconds=stable_prediction.label,
-                            started_at=now,
-                            confidence=stable_prediction.confidence,
-                        )
-                        status_text = f"{stable_prediction.label}-second countdown started."
-                elif stable_prediction.label != active_countdown.label:
-                    active_countdown = CountdownState(
-                        label=stable_prediction.label,
-                        duration_seconds=stable_prediction.label,
-                        started_at=now,
-                        confidence=stable_prediction.confidence,
-                    )
-                    status_text = f"Countdown updated to {stable_prediction.label} seconds."
-            elif stable_prediction.label is None and active_countdown is None and features is not None:
-                status_text = "Gesture seen, but it is not stable yet."
-
-            # ── Countdown logic ─────────────────────────────────────────
-            if active_countdown is not None:
-                elapsed = now - active_countdown.started_at
-                countdown_remaining = max(0.0, active_countdown.duration_seconds - elapsed)
-                if countdown_remaining <= 0.0:
-                    ready_for_capture = now - last_capture_time >= CAPTURE_COOLDOWN_SECONDS
-                    if ready_for_capture:
-                        pending_capture = CaptureRequest(
-                            trigger="gesture_countdown",
-                            gesture_label=active_countdown.label,
-                            countdown_seconds=active_countdown.duration_seconds,
-                            confidence=active_countdown.confidence,
-                        )
-                        last_committed_gesture_label = active_countdown.label
-                        active_countdown = None
-                        prediction_window.clear()
-                        countdown_remaining = None
-                        status_text = "Gesture countdown complete. Capturing photo."
-                    else:
-                        countdown_remaining = 0.0
-                        status_text = "Camera cooldown active. Hold your pose."
+            prediction = (raw_prediction, raw_confidence) if raw_prediction is not None else None
+            update = controller.update(prediction, now=time.time())
 
             # ── Drawing ─────────────────────────────────────────────────
+            if frame.shape[1] < args.display_width:
+                scale = args.display_width / frame.shape[1]
+                frame = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
             draw_landmarks(frame, detection_result)
 
             elapsed_for_fps = time.time() - fps_timer_start
             if elapsed_for_fps >= 1.0:
-                fps = fps_frame_counter / elapsed_for_fps
+                telemetry.fps = fps_frame_counter / elapsed_for_fps
                 fps_timer_start = time.time()
                 fps_frame_counter = 0
 
@@ -229,70 +243,84 @@ def main() -> None:
                 frame,
                 raw_prediction=raw_prediction,
                 raw_confidence=raw_confidence,
-                stable_prediction=stable_prediction,
-                active_countdown=active_countdown,
-                countdown_remaining=countdown_remaining,
+                stable_prediction=update.stable_prediction,
+                active_countdown=controller.active_countdown,
+                countdown_remaining=update.countdown_remaining,
                 captures_saved=captures_saved,
-                fps=fps,
-                status_text=status_text,
+                fps=telemetry.fps,
+                status_text=controller.status_text,
                 hand_detected=hand_detected,
+                probabilities=probabilities,
+                telemetry=telemetry,
+                show_hud=show_hud,
             )
             draw_flash_effect(frame, flash_until)
 
-            # ── Capture ─────────────────────────────────────────────────
-            if pending_capture is not None:
-                filename, preview_name = save_capture(
-                    raw_frame, frame, pending_capture,
-                    raw_prediction, raw_confidence, stable_prediction,
-                )
+            def take_photo(request: CaptureRequest) -> None:
+                nonlocal captures_saved, flash_until
+                try:
+                    filename, _ = save_capture(
+                        raw_frame, frame, request,
+                        raw_prediction, raw_confidence, update.stable_prediction,
+                    )
+                except OSError as exc:
+                    logger.error("Could not save photo: %s", exc)
+                    controller.status_text = "Could not save photo - check disk space."
+                    return
                 captures_saved += 1
-                last_capture_time = time.time()
-                flash_until = last_capture_time + FLASH_DURATION_SECONDS
-                status_text = f"Saved {filename}."
+                controller.mark_captured(time.time(), filename)
+                flash_until = controller.last_capture_time + FLASH_DURATION_SECONDS
+                logger.info("Saved %s (%s)", filename, request.trigger)
+
+            # ── Capture ─────────────────────────────────────────────────
+            if update.capture_request is not None:
+                take_photo(update.capture_request)
 
             cv2.imshow(WINDOW_NAME, frame)
 
             # ── Keyboard ────────────────────────────────────────────────
             key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
+            if key in (ord("q"), KEY_ESC):
                 break
             if key in (ord(" "), ord("s")):
-                active_countdown = None
-                prediction_window.clear()
-                last_committed_gesture_label = None
-                manual_request = CaptureRequest(
-                    trigger="manual_capture",
-                    gesture_label=None,
-                    countdown_seconds=None,
-                    confidence=None,
-                )
-                filename, preview_name = save_capture(
-                    raw_frame, frame, manual_request,
-                    raw_prediction, raw_confidence, stable_prediction,
-                )
-                captures_saved += 1
-                last_capture_time = time.time()
-                flash_until = last_capture_time + FLASH_DURATION_SECONDS
-                status_text = f"Saved {filename}."
-                continue
-            if key == ord("x"):
-                active_countdown = None
-                prediction_window.clear()
-                last_committed_gesture_label = None
-                status_text = "Countdown cancelled."
-                continue
-            if key == ord("r"):
-                active_countdown = None
-                prediction_window.clear()
-                last_committed_gesture_label = None
-                status_text = "Gesture state reset."
-                continue
+                take_photo(controller.manual_capture_request())
+            elif key == ord("x"):
+                controller.cancel()
+            elif key == ord("r"):
+                controller.reset()
+            elif key == ord("h"):
+                show_hud = not show_hud
 
+            # Stop cleanly when the user closes the window with the mouse. Some
+            # OpenCV backends always report -1, so only trust the property once
+            # it has been seen reporting a visible window.
+            visible = cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE)
+            if visible >= 1:
+                window_seen_visible = True
+            elif window_seen_visible:
+                break
+
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user.")
     finally:
         cap.release()
         cv2.destroyAllWindows()
         detector.close()
 
+    duration = max(time.time() - session_start, 1e-6)
+    logger.info(
+        "Session summary: %d frames in %.1fs (%.1f FPS avg) | hand detect %.1f ms avg | "
+        "classifier %.3f ms avg (%s) | %d photo(s) saved to %s",
+        frame_count, duration, frame_count / duration,
+        detect_total_ms / max(frame_count, 1),
+        classify_total_ms / max(classified_frames, 1), engine,
+        captures_saved, CAPTURE_DIR.relative_to(PROJECT_ROOT),
+    )
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (FileNotFoundError, RuntimeError) as exc:
+        logging.getLogger("smart_camera").error("%s", exc)
+        sys.exit(1)

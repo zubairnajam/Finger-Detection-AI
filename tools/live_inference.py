@@ -44,10 +44,11 @@ WINDOW_NAME = "Legacy Gesture-Controlled Prototype"
 COUNTDOWN_SECONDS = 3.0
 CAPTURE_COOLDOWN_SECONDS = 2.0
 
-# Override stabilisation thresholds for legacy mode (stricter)
-from src import config as _cfg
-_cfg.MIN_STABLE_VOTES = 6
-_cfg.MIN_CONFIDENCE = 0.65
+# Stricter stabilisation thresholds for legacy mode. (These used to be
+# monkey-patched onto src.config, which had no effect because prediction.py
+# had already imported the values; they are now passed explicitly.)
+LEGACY_MIN_STABLE_VOTES = 6
+LEGACY_MIN_CONFIDENCE = 0.65
 
 
 def ensure_dirs() -> None:
@@ -177,7 +178,11 @@ def main() -> None:
                 countdown_start_time = None
                 status_text = "No hand detected."
 
-            stable_prediction = resolve_stable_prediction(prediction_window)
+            stable_prediction = resolve_stable_prediction(
+                prediction_window,
+                min_votes=LEGACY_MIN_STABLE_VOTES,
+                min_confidence=LEGACY_MIN_CONFIDENCE,
+            )
             countdown_remaining: Optional[float] = None
             pending_auto_capture: tuple[int, float] | None = None
 

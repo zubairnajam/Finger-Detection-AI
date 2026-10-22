@@ -111,10 +111,14 @@ def export_scaler():
         print("          The website will skip feature normalisation.")
         return
 
+    # train_model.py stores the standard deviation as "std"; the web app reads
+    # it under the key "scale" (sklearn naming). Zero std is mapped to 1.
     data = np.load(SCALER_PATH)
+    std = data["std"].astype(float)
+    std[std == 0] = 1.0
     scaler_dict = {
         "mean": data["mean"].tolist(),
-        "scale": data["scale"].tolist(),
+        "scale": std.tolist(),
     }
     SCALER_JSON.write_text(json.dumps(scaler_dict, indent=2))
     print(f"      ✓ Scaler exported ({len(scaler_dict['mean'])} features)")

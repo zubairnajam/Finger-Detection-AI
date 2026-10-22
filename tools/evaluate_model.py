@@ -2,7 +2,9 @@
 Standalone model evaluation and latency benchmark.
 
 Loads the trained model, runs it against the test set, reports accuracy,
-per-class precision/recall/F1, confusion matrix, and inference latency.
+per-class precision/recall/F1, accuracy per data source (public archive vs
+this project's own webcam captures), confusion matrix, and inference latency
+for both the production NumPy engine and keras.predict().
 
 Usage:
     python tools/evaluate_model.py
@@ -12,11 +14,18 @@ Outputs are saved to outputs/evaluation/.
 
 from __future__ import annotations
 
+import csv
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -27,7 +36,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from src.config import EVALUATION_DIR, LABELS, TEST_DIR, TRAIN_DIR
+from src.config import CLASS_NAMES, EVALUATION_DIR, LABELS, TEST_DIR
 from src.prediction import load_model_and_scaler
 
 
@@ -39,6 +48,19 @@ def load_test_set():
     x_test = np.load(TEST_DIR / "X_test.npy")
     y_test = np.load(TEST_DIR / "y_test.npy")
     return x_test, y_test
+
+
+def load_test_sources(n_rows: int) -> list[str] | None:
+    """Return 'webcam' or 'archive' for each test row, or None if unavailable."""
+    csv_path = TEST_DIR / "test_landmarks.csv"
+    if not csv_path.exists():
+        return None
+    with csv_path.open(encoding="utf-8") as handle:
+        sources = [
+            "webcam" if row["image_path"].replace("\\", "/").startswith("data/raw/") else "archive"
+            for row in csv.DictReader(handle)
+        ]
+    return sources if len(sources) == n_rows else None
 
 
 def benchmark_latency(
@@ -91,7 +113,7 @@ def plot_per_class_f1(report_dict: dict, output_path: Path) -> None:
     f1_scores = [report_dict[label_str]["f1-score"] for label_str in labels_str]
 
     plt.figure(figsize=(8, 4))
-    bars = plt.bar(labels_str, f1_scores, color="#4A90D9", edgecolor="white")
+    bars = plt.bar(labels_str, f1_scores, color="#2a78d6", edgecolor="white")
     for bar, score in zip(bars, f1_scores):
         plt.text(
             bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
@@ -108,13 +130,11 @@ def plot_per_class_f1(report_dict: dict, output_path: Path) -> None:
 
 def main() -> None:
     ensure_dirs()
-    model, mean, std = load_model_and_scaler()
+    model, mean, std = load_model_and_scaler(backend="numpy")
+    keras_model, _, _ = load_model_and_scaler(backend="keras")
     x_test, y_test = load_test_set()
 
-    # Scale test features
-    std_safe = std.copy()
-    std_safe[std_safe == 0] = 1.0
-    x_test_scaled = (x_test - mean) / std_safe
+    x_test_scaled = (x_test - mean) / std
 
     # Predict
     probabilities = model.predict(x_test_scaled, verbose=0)
@@ -124,23 +144,43 @@ def main() -> None:
     # Classification report (text + dict)
     report_text = classification_report(y_test, y_pred, labels=LABELS, digits=4, zero_division=0)
     report_dict = classification_report(y_test, y_pred, labels=LABELS, digits=4, zero_division=0, output_dict=True)
+    cm = confusion_matrix(y_test, y_pred, labels=LABELS)
 
-    # Latency benchmark
-    print("Running latency benchmark (1000 predictions)...")
+    # Accuracy per data source (public archive vs this project's own webcam captures)
+    per_source: dict[str, dict] = {}
+    sources = load_test_sources(len(y_test))
+    if sources is not None:
+        src = np.array(sources)
+        for name in ("archive", "webcam"):
+            mask = src == name
+            if mask.any():
+                per_source[name] = {
+                    "samples": int(mask.sum()),
+                    "accuracy": float(accuracy_score(y_test[mask], y_pred[mask])),
+                }
+
+    # Latency: production NumPy engine vs the original keras.predict() path
+    print("Running latency benchmark (NumPy engine x1000, keras.predict x200)...")
     latency = benchmark_latency(model, mean, std, x_test)
+    latency_keras = benchmark_latency(keras_model, mean, std, x_test, n_runs=200)
 
     # Per-class summary table
     print("\n" + "=" * 60)
     print("  FINGER COUNT DETECTION — EVALUATION RESULTS")
     print("=" * 60)
-    print(f"\n  Test samples:    {len(y_test)}")
+    print(f"\n  Test samples:     {len(y_test)}")
     print(f"  Overall accuracy: {accuracy:.4f}  ({accuracy:.1%})")
-    print(f"\n  Inference latency:")
-    print(f"    Mean:    {latency['mean_ms']:.2f} ms")
-    print(f"    Median:  {latency['median_ms']:.2f} ms")
-    print(f"    P95:     {latency['p95_ms']:.2f} ms")
-    print(f"    P99:     {latency['p99_ms']:.2f} ms")
-    print(f"\n  Per-class report:\n")
+    print(f"  Macro F1:         {report_dict['macro avg']['f1-score']:.4f}")
+    for name, stats in per_source.items():
+        print(f"    {name:<8} accuracy {stats['accuracy']:.4f}  ({stats['samples']} samples)")
+    print("\n  Inference latency (NumPy engine, used by the app):")
+    print(f"    Mean:    {latency['mean_ms']:.4f} ms")
+    print(f"    Median:  {latency['median_ms']:.4f} ms")
+    print(f"    P95:     {latency['p95_ms']:.4f} ms")
+    print(f"    P99:     {latency['p99_ms']:.4f} ms")
+    print(f"  keras.predict() for comparison: {latency_keras['mean_ms']:.2f} ms mean "
+          f"({latency_keras['mean_ms'] / latency['mean_ms']:,.0f}x slower)")
+    print("\n  Per-class report:\n")
     print(report_text)
 
     # Plots
@@ -151,6 +191,15 @@ def main() -> None:
     evaluation_summary = {
         "test_samples": int(len(y_test)),
         "accuracy": float(accuracy),
+        "macro_avg": {
+            "precision": report_dict["macro avg"]["precision"],
+            "recall": report_dict["macro avg"]["recall"],
+            "f1_score": report_dict["macro avg"]["f1-score"],
+        },
+        "per_source": per_source,
+        "confusion_matrix": cm.tolist(),
+        "model_parameters": int(model.count_params()),
+        "class_names": {str(k): v for k, v in CLASS_NAMES.items()},
         "per_class": {
             str(label): {
                 "precision": report_dict[str(label)]["precision"],
@@ -161,10 +210,12 @@ def main() -> None:
             for label in LABELS
         },
         "latency": latency,
+        "latency_backend": "numpy",
+        "latency_keras_predict": latency_keras,
         "approach": {
             "hand_detection": "MediaPipe Hand Landmarker (float16)",
             "feature_extraction": "21 3D landmarks → 63 features (x, y, z)",
-            "classifier": "TensorFlow/Keras MLP (128 → 64 → 32 → 6, softmax)",
+            "classifier": "TensorFlow/Keras MLP (128 → 64 → 32 → 6, softmax), served by a NumPy engine",
             "stabilisation": "Rolling-window majority vote (8-frame window, min 4 votes, min 55% confidence)",
         },
     }

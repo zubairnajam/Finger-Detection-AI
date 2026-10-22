@@ -1,0 +1,179 @@
+{
+  "generated_at": "2026-10-22T16:51:29+00:00",
+  "system": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
+    "cpu_count": 6,
+    "python": "3.13.7",
+    "numpy": "2.4.4",
+    "tensorflow": "2.21.0",
+    "mediapipe": "0.10.33",
+    "opencv": "4.13.0"
+  },
+  "model_parameters": 18726,
+  "classifier": {
+    "single_sample": {
+      "keras_predict": {
+        "n": 250,
+        "mean_ms": 75.83525839971844,
+        "median_ms": 71.42049999674782,
+        "p95_ms": 95.53197999630348,
+        "p99_ms": 162.44172000137007
+      },
+      "keras_call": {
+        "n": 1000,
+        "mean_ms": 5.656910800084006,
+        "median_ms": 4.946900007780641,
+        "p95_ms": 8.930925012100488,
+        "p99_ms": 16.035502010054174
+      },
+      "numpy": {
+        "n": 10000,
+        "mean_ms": 0.028967530086811168,
+        "median_ms": 0.027599991881288588,
+        "p95_ms": 0.03160000778734684,
+        "p99_ms": 0.04860099172219636
+      }
+    },
+    "speedup_vs_keras_predict": 2617.940092664166,
+    "batch_throughput_samples_per_s": {
+      "keras_predict": 35743.952474220096,
+      "numpy": 909202.6676952397
+    },
+    "batch_size": 3550
+  },
+  "pipeline": {
+    "frame_resolution": "640x480",
+    "hand_detection": {
+      "n": 55,
+      "mean_ms": 24.87929636501411,
+      "median_ms": 24.860200006514788,
+      "p95_ms": 25.91633000120055,
+      "p99_ms": 26.326342002430465
+    },
+    "feature_extraction": {
+      "n": 55,
+      "mean_ms": 0.022827272186987102,
+      "median_ms": 0.022199994418770075,
+      "p95_ms": 0.025390004157088697,
+      "p99_ms": 0.03561999823432417
+    },
+    "classification": {
+      "n": 55,
+      "mean_ms": 0.0861272726483135,
+      "median_ms": 0.08549999620299786,
+      "p95_ms": 0.09032999369082972,
+      "p99_ms": 0.09303799655754119
+    },
+    "total_mean_ms": 24.98825090984941,
+    "max_fps": 40.01880738302649
+  },
+  "lighting": {
+    "Original": {
+      "images": 56,
+      "detection_rate": 0.9821428571428571,
+      "accuracy_when_detected": 0.7818181818181819,
+      "end_to_end_accuracy": 0.7678571428571429
+    },
+    "Dim (40%)": {
+      "images": 56,
+      "detection_rate": 0.9642857142857143,
+      "accuracy_when_detected": 0.6666666666666666,
+      "end_to_end_accuracy": 0.6428571428571429
+    },
+    "Very dim (15%)": {
+      "images": 56,
+      "detection_rate": 0.14285714285714285,
+      "accuracy_when_detected": 0.5,
+      "end_to_end_accuracy": 0.07142857142857142
+    },
+    "Overexposed": {
+      "images": 56,
+      "detection_rate": 0.8571428571428571,
+      "accuracy_when_detected": 0.7291666666666666,
+      "end_to_end_accuracy": 0.625
+    },
+    "Low contrast": {
+      "images": 56,
+      "detection_rate": 0.7678571428571429,
+      "accuracy_when_detected": 0.7209302325581395,
+      "end_to_end_accuracy": 0.5535714285714286
+    },
+    "Sensor noise": {
+      "images": 56,
+      "detection_rate": 0.625,
+      "accuracy_when_detected": 0.7142857142857143,
+      "end_to_end_accuracy": 0.44642857142857145
+    },
+    "Motion blur": {
+      "images": 56,
+      "detection_rate": 0.8928571428571429,
+      "accuracy_when_detected": 0.72,
+      "end_to_end_accuracy": 0.6428571428571429
+    }
+  },
+  "lighting_note": "56 held-out webcam frames (labels 1-5) from the test split; conditions are simulated with photometric transforms.",
+  "temporal": {
+    "samples": 3550,
+    "window": 8,
+    "min_votes": 4,
+    "min_confidence": 0.55,
+    "results": [
+      {
+        "sigma": 0.0,
+        "sigma_pixels_at_640": 0.0,
+        "per_frame_accuracy": 0.9771830985915493,
+        "per_frame_error_rate": 0.022816901408450718,
+        "stabilised_accuracy_when_committed": 0.9801136363636364,
+        "stabilised_false_trigger_rate": 0.01971830985915493,
+        "abstain_rate": 0.008450704225352101
+      },
+      {
+        "sigma": 0.003125,
+        "sigma_pixels_at_640": 2.0,
+        "per_frame_accuracy": 0.9755633802816901,
+        "per_frame_error_rate": 0.024436619718309904,
+        "stabilised_accuracy_when_committed": 0.9784397163120567,
+        "stabilised_false_trigger_rate": 0.02140845070422535,
+        "abstain_rate": 0.007042253521126751
+      },
+      {
+        "sigma": 0.00625,
+        "sigma_pixels_at_640": 4.0,
+        "per_frame_accuracy": 0.9745070422535211,
+        "per_frame_error_rate": 0.02549295774647886,
+        "stabilised_accuracy_when_committed": 0.9773242630385488,
+        "stabilised_false_trigger_rate": 0.022535211267605635,
+        "abstain_rate": 0.006197183098591519
+      },
+      {
+        "sigma": 0.0125,
+        "sigma_pixels_at_640": 8.0,
+        "per_frame_accuracy": 0.9685915492957746,
+        "per_frame_error_rate": 0.03140845070422538,
+        "stabilised_accuracy_when_committed": 0.9756718528995757,
+        "stabilised_false_trigger_rate": 0.024225352112676058,
+        "abstain_rate": 0.004225352112676051
+      },
+      {
+        "sigma": 0.01875,
+        "sigma_pixels_at_640": 12.0,
+        "per_frame_accuracy": 0.9605985915492957,
+        "per_frame_error_rate": 0.03940140845070428,
+        "stabilised_accuracy_when_committed": 0.9725523486134692,
+        "stabilised_false_trigger_rate": 0.02732394366197183,
+        "abstain_rate": 0.004507042253521165
+      },
+      {
+        "sigma": 0.025,
+        "sigma_pixels_at_640": 16.0,
+        "per_frame_accuracy": 0.9466197183098591,
+        "per_frame_error_rate": 0.05338028169014086,
+        "stabilised_accuracy_when_committed": 0.9677328049816021,
+        "stabilised_false_trigger_rate": 0.03211267605633803,
+        "abstain_rate": 0.004788732394366169
+      }
+    ],
+    "note": "Each test sample is replayed as an 8-frame window with i.i.d. Gaussian jitter added to every landmark's x/y position (std. dev. in pixels at 640 px width)."
+  }
+}

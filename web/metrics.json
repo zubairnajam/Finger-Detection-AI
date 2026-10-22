@@ -1,9 +1,75 @@
 {
-  "generated_at": "2026-04-27T19:21:33.005096+00:00",
+  "generated_at": "2026-10-22T16:54:21.746314+00:00",
   "accuracy": 97.72,
   "test_samples": 3550,
-  "mean_latency_ms": 65.8,
-  "p95_latency_ms": 74.2,
+  "train_samples": 17578,
+  "macro_precision": 97.75,
+  "macro_recall": 97.79,
+  "macro_f1": 97.77,
+  "mean_latency_ms": 0.0366,
+  "p95_latency_ms": 0.0395,
+  "latency_backend": "numpy",
+  "keras_predict_latency_ms": 93.87,
+  "per_source": {
+    "archive": {
+      "samples": 3444,
+      "accuracy": 97.97
+    },
+    "webcam": {
+      "samples": 106,
+      "accuracy": 89.62
+    }
+  },
+  "confusion_matrix": [
+    [
+      473,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      599,
+      11,
+      1,
+      0,
+      0
+    ],
+    [
+      6,
+      7,
+      586,
+      6,
+      3,
+      0
+    ],
+    [
+      0,
+      3,
+      14,
+      588,
+      10,
+      2
+    ],
+    [
+      0,
+      0,
+      0,
+      13,
+      606,
+      1
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      1,
+      617
+    ]
+  ],
   "classes": [
     {
       "label": 0,
@@ -55,8 +121,8 @@
     }
   ],
   "train_accuracy": 97.72,
-  "train_epochs": null,
-  "model_parameters": null,
+  "train_epochs": 56,
+  "model_parameters": 18726,
   "f1_scores": [
     0.991614,
     0.981967,
@@ -72,5 +138,92 @@
     "3 (Three)",
     "4 (Four)",
     "5 (Open Hand)"
-  ]
+  ],
+  "benchmarks": {
+    "generated_at": "2026-10-22T16:51:29+00:00",
+    "processor": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
+    "classifier_latency_ms": {
+      "keras_predict": 75.835,
+      "keras_call": 5.657,
+      "numpy": 0.029
+    },
+    "speedup": 2618,
+    "pipeline": {
+      "resolution": "640x480",
+      "detect_ms": 24.88,
+      "classify_ms": 0.0861,
+      "total_ms": 24.99,
+      "max_fps": 40
+    },
+    "lighting": [
+      {
+        "condition": "Original",
+        "detection_rate": 98.2,
+        "accuracy": 76.8
+      },
+      {
+        "condition": "Dim (40%)",
+        "detection_rate": 96.4,
+        "accuracy": 64.3
+      },
+      {
+        "condition": "Very dim (15%)",
+        "detection_rate": 14.3,
+        "accuracy": 7.1
+      },
+      {
+        "condition": "Overexposed",
+        "detection_rate": 85.7,
+        "accuracy": 62.5
+      },
+      {
+        "condition": "Low contrast",
+        "detection_rate": 76.8,
+        "accuracy": 55.4
+      },
+      {
+        "condition": "Sensor noise",
+        "detection_rate": 62.5,
+        "accuracy": 44.6
+      },
+      {
+        "condition": "Motion blur",
+        "detection_rate": 89.3,
+        "accuracy": 64.3
+      }
+    ],
+    "lighting_note": "56 held-out webcam frames (labels 1-5) from the test split; conditions are simulated with photometric transforms.",
+    "temporal": [
+      {
+        "jitter_px": 0.0,
+        "single_frame_err": 2.28,
+        "voted_err": 1.97
+      },
+      {
+        "jitter_px": 2.0,
+        "single_frame_err": 2.44,
+        "voted_err": 2.14
+      },
+      {
+        "jitter_px": 4.0,
+        "single_frame_err": 2.55,
+        "voted_err": 2.25
+      },
+      {
+        "jitter_px": 8.0,
+        "single_frame_err": 3.14,
+        "voted_err": 2.42
+      },
+      {
+        "jitter_px": 12.0,
+        "single_frame_err": 3.94,
+        "voted_err": 2.73
+      },
+      {
+        "jitter_px": 16.0,
+        "single_frame_err": 5.34,
+        "voted_err": 3.21
+      }
+    ]
+  }
 }

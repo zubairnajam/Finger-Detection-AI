@@ -5,3 +5,4 @@ __pycache__/
 /archive/
 /outputs/final_camera/
 /outputs/legacy_captures/
+.pytest_cache/

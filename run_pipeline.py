@@ -44,7 +44,7 @@ def main():
     print("4. Train Model         (AI training)")
     print("5. Evaluate Model      (Accuracy, F1, latency benchmark)")
     print("6. Sync Web Metrics    (Update website charts & stats)")
-    print("7. Convert to TF.js    (Update browser model)")
+    print("7. Export Web Model    (Update browser model)")
     print("8. Smart Camera        (Launch the final camera app)")
 
     # Core stages — must succeed
@@ -59,7 +59,7 @@ def main():
     # Web sync stages
     web_stages = [
         ("tools/sync_web_metrics.py",       False),  # required — writes web/metrics.json
-        ("tools/convert_model_to_tfjs.py",  False),   # optional — needs: pip install tensorflowjs
+        ("tools/export_web_model.py",       False),  # required — writes web/model/mlp.json + mlp.bin
     ]
 
     for script in core_stages:
@@ -73,7 +73,7 @@ def main():
     print(f"\n{'='*60}")
     print("🎉 Pipeline completed successfully!")
     print("   • web/metrics.json  → website metrics are up to date")
-    print("   • web/model/        → browser model updated (if tensorflowjs installed)")
+    print("   • web/model/        → browser model updated")
     print(f"{'='*60}")
 
 if __name__ == "__main__":

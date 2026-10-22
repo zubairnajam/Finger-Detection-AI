@@ -20,6 +20,9 @@ HAND_LANDMARKER_PATH = PROJECT_ROOT / "hand_landmarker.task"
 CAPTURE_DIR = PROJECT_ROOT / "outputs" / "final_camera"
 LEGACY_CAPTURE_DIR = PROJECT_ROOT / "outputs" / "legacy_captures"
 EVALUATION_DIR = PROJECT_ROOT / "outputs" / "evaluation"
+TRAINING_DIR = PROJECT_ROOT / "outputs" / "training"
+BENCHMARK_DIR = PROJECT_ROOT / "outputs" / "benchmarks"
+WEB_DIR = PROJECT_ROOT / "web"
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 TRAIN_DIR = PROJECT_ROOT / "data" / "train"
@@ -28,6 +31,7 @@ TEST_DIR = PROJECT_ROOT / "data" / "test"
 # ── Labels & model ──────────────────────────────────────────────────────────
 LABELS = [0, 1, 2, 3, 4, 5]
 VALID_LABEL_STRINGS = tuple(str(label) for label in LABELS)
+CLASS_NAMES = {0: "Fist", 1: "Index", 2: "Peace", 3: "Three", 4: "Four", 5: "Open Hand"}
 
 # ── Prediction stabilisation ────────────────────────────────────────────────
 ROLLING_WINDOW_SIZE = 8
@@ -49,6 +53,10 @@ COLOR_DARK_BG = (18, 18, 18)
 COLOR_GREEN = (0, 255, 120)
 COLOR_RED = (60, 60, 255)
 COLOR_ACCENT = (255, 180, 50)
+COLOR_CYAN = (255, 212, 0)
+COLOR_YELLOW = (0, 210, 255)
+COLOR_MUTED = (150, 150, 150)
+COLOR_PANEL_BORDER = (70, 70, 70)
 
 
 # ── Shared dataclasses ──────────────────────────────────────────────────────
