@@ -40,6 +40,9 @@ MIN_CONFIDENCE = 0.55
 
 # ── Camera timing ───────────────────────────────────────────────────────────
 CAPTURE_COOLDOWN_SECONDS = 1.0
+# A gesture must stay stable this long before it locks in a countdown, so the
+# in-between finger counts seen while raising a hand don't arm the wrong one.
+ARM_HOLD_SECONDS = 0.6
 FLASH_DURATION_SECONDS = 0.18
 FRAME_TIME_MS = 33
 

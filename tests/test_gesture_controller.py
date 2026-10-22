@@ -19,7 +19,8 @@ def feed(controller, label, frames, start, confidence=0.95, dt=0.033):
 
 @pytest.fixture
 def controller():
-    return GestureController(cooldown_seconds=1.0)
+    # Arm instantly so tests can focus on countdown logic; arm-hold has its own tests.
+    return GestureController(cooldown_seconds=1.0, arm_hold_seconds=0.0)
 
 
 def test_no_hand_does_nothing(controller):
@@ -67,12 +68,43 @@ def test_gesture_rearms_after_hand_leaves(controller):
     assert controller.active_countdown is not None
 
 
-def test_changing_gesture_restarts_countdown(controller):
+def test_countdown_is_locked_against_other_gestures(controller):
     _, now = feed(controller, 5, ROLLING_WINDOW_SIZE, start=10.0)
+    started_at = controller.active_countdown.started_at
+    for label in (2, 3, 4, 1):
+        _, now = feed(controller, label, ROLLING_WINDOW_SIZE, start=now)
     assert controller.active_countdown.label == 5
-    feed(controller, 2, ROLLING_WINDOW_SIZE, start=now)
-    assert controller.active_countdown.label == 2
-    assert controller.active_countdown.duration_seconds == 2
+    assert controller.active_countdown.duration_seconds == 5
+    assert controller.active_countdown.started_at == started_at
+
+
+def test_locked_countdown_still_captures_with_original_label(controller):
+    _, now = feed(controller, 3, ROLLING_WINDOW_SIZE, start=10.0)
+    feed(controller, 1, ROLLING_WINDOW_SIZE, start=now)
+    update = controller.update((1, 0.95), now=now + 3.5)
+    assert update.capture_request is not None
+    assert update.capture_request.gesture_label == 3
+
+
+def test_gesture_must_be_held_before_arming():
+    controller = GestureController(arm_hold_seconds=0.6)
+    _, now = feed(controller, 3, ROLLING_WINDOW_SIZE, start=10.0)  # ~0.26 s
+    assert controller.active_countdown is None
+    assert "hold" in controller.status_text.lower()
+    feed(controller, 3, 15, start=now)  # another ~0.5 s
+    assert controller.active_countdown is not None
+    assert controller.active_countdown.label == 3
+
+
+def test_transient_counts_while_raising_hand_do_not_arm():
+    controller = GestureController(arm_hold_seconds=0.6)
+    now = 10.0
+    # Fingers coming up one by one, each visible for ~0.3 s.
+    for label in (1, 2, 3, 4):
+        _, now = feed(controller, label, 9, start=now)
+        assert controller.active_countdown is None
+    feed(controller, 5, 30, start=now)
+    assert controller.active_countdown.label == 5
 
 
 def test_fist_cancels_countdown(controller):

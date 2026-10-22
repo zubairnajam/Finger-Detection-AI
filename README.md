@@ -26,8 +26,8 @@ python tools/download_model.py        # MediaPipe hand model (one-time)
 python src/final_camera_app.py        # launch the camera app
 ```
 
-**Gestures:** hold up 1–5 fingers to start an N-second countdown · switch count to
-restart it · make a fist to cancel.
+**Gestures:** hold 1–5 fingers steady for 0.6 s to lock in an N-second countdown.
+Once locked, other finger counts are ignored until the photo is taken. Make a fist to cancel.
 
 **Keys:** `SPACE`/`s` instant photo · `x` cancel countdown · `r` reset ·
 `h` toggle HUD · `q`/`Esc` quit
@@ -169,7 +169,7 @@ python -m pytest
 | Suite | Covers |
 |-------|--------|
 | `test_inference.py` | NumPy engine vs Keras numerical parity |
-| `test_gesture_controller.py` | Countdown start/restart/cancel, re-arm rules |
+| `test_gesture_controller.py` | Arm-hold, countdown lock, cancel, re-arm rules |
 | `test_stabilizer.py` | Rolling-window voting thresholds |
 | `test_ui_and_features.py` | Feature extraction, overlay rendering |
 | `test_web_engine.py` | JavaScript engine vs Python parity (264 vectors, needs Node) |

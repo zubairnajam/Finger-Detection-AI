@@ -5,8 +5,9 @@ Keeping this logic free of I/O makes it unit-testable: tests feed in
 synthetic predictions and timestamps and assert on countdowns and captures.
 
 Rules:
-    * Hold 1-5 fingers steadily -> start an N-second countdown.
-    * Switch to a different count mid-countdown -> restart with the new length.
+    * Hold 1-5 fingers steadily for ARM_HOLD_SECONDS -> start an N-second countdown.
+    * Once started, the countdown is locked: other finger counts are ignored
+      until the photo is taken.
     * Hold a fist (0) -> cancel the countdown.
     * After a capture, the same gesture will not re-arm until the hand changes
       gesture or leaves the frame (prevents accidental burst shots).
@@ -19,6 +20,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.config import (
+    ARM_HOLD_SECONDS,
     CAPTURE_COOLDOWN_SECONDS,
     MIN_CONFIDENCE,
     MIN_STABLE_VOTES,
@@ -50,13 +52,18 @@ class GestureController:
         min_votes: int = MIN_STABLE_VOTES,
         min_confidence: float = MIN_CONFIDENCE,
         cooldown_seconds: float = CAPTURE_COOLDOWN_SECONDS,
+        arm_hold_seconds: float = ARM_HOLD_SECONDS,
     ) -> None:
         self.window: deque[tuple[int, float]] = deque(maxlen=window_size)
         self.min_votes = min_votes
         self.min_confidence = min_confidence
         self.cooldown_seconds = cooldown_seconds
+        self.arm_hold_seconds = arm_hold_seconds
 
         self.active_countdown: Optional[CountdownState] = None
+        # Label currently being held towards arming, and when it was first seen.
+        self.arming_label: Optional[int] = None
+        self.arming_since = 0.0
         self.last_committed_label: Optional[int] = None
         self.last_capture_time = 0.0
         self.status_text = "Press SPACE for an instant photo or hold up 1-5 fingers for a countdown."
@@ -86,19 +93,26 @@ class GestureController:
         return FrameUpdate(stable, remaining, request)
 
     def _apply_gesture(self, stable: StablePrediction, *, hand_visible: bool, now: float) -> None:
+        if stable.label not in COUNTDOWN_LABELS or self.active_countdown is not None:
+            self.arming_label = None
+
         if stable.label == 0:
             self.last_committed_label = None
             if self.active_countdown is not None:
                 self.active_countdown = None
                 self.status_text = "Countdown cancelled by 0-finger gesture."
         elif stable.label in COUNTDOWN_LABELS:
-            if self.active_countdown is None:
-                if stable.label != self.last_committed_label:
+            # A running countdown is locked; only a fist or a key can stop it.
+            if self.active_countdown is None and stable.label != self.last_committed_label:
+                if stable.label != self.arming_label:
+                    self.arming_label = stable.label
+                    self.arming_since = now
+                if now - self.arming_since >= self.arm_hold_seconds:
+                    self.arming_label = None
                     self._start_countdown(stable, now)
-                    self.status_text = f"{stable.label}-second countdown started."
-            elif stable.label != self.active_countdown.label:
-                self._start_countdown(stable, now)
-                self.status_text = f"Countdown updated to {stable.label} seconds."
+                    self.status_text = f"{stable.label}-second countdown locked in."
+                else:
+                    self.status_text = f"Hold {stable.label} finger(s) steady..."
         elif stable.label is None and self.active_countdown is None and hand_visible:
             self.status_text = "Gesture seen, but it is not stable yet."
 
@@ -141,6 +155,7 @@ class GestureController:
         self.active_countdown = None
         self.window.clear()
         self.last_committed_label = None
+        self.arming_label = None
         self.status_text = status_text
 
     def cancel(self) -> None:

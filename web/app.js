@@ -13,6 +13,7 @@ import { MLP } from "./mlp.js";
 const WINDOW_SIZE = 8;
 const MIN_VOTES = 4;
 const MIN_CONFIDENCE = 0.55;
+const ARM_HOLD_SECONDS = 0.6; // gesture must hold this long before the countdown locks in
 const CIRCUMFERENCE = 2 * Math.PI * 90; // countdown ring
 const CLASS_NAMES = ["Fist", "Index", "Peace", "Three", "Four", "Open Hand"];
 const EMA = 0.1;
@@ -51,6 +52,8 @@ const state = {
   countdownDuration: 0,
   countdownStart: 0,
   lastCommittedLabel: null,
+  armingLabel: null,
+  armingSince: 0,
   captureCount: 0,
   fps: 0,
   fpsFrameCount: 0,
@@ -415,19 +418,30 @@ function processFrame() {
   const stablePred = getStablePrediction();
 
   // ── Gesture state machine (mirrors src/gesture_controller.py) ──
+  const isCountLabel = stablePred.label >= 1 && stablePred.label <= 5;
+  if (!isCountLabel || state.countdownActive) state.armingLabel = null;
+
   if (stablePred.label === 0) {
     state.lastCommittedLabel = null;
     if (state.countdownActive) {
       cancelCountdown();
       state.statusText = "Countdown cancelled (fist)";
     }
-  } else if (stablePred.label >= 1 && stablePred.label <= 5) {
-    if (!state.countdownActive) {
-      if (stablePred.label !== state.lastCommittedLabel) startCountdown(stablePred.label);
-    } else if (stablePred.label !== state.countdownLabel) {
-      cancelCountdown();
-      startCountdown(stablePred.label);
-      state.statusText = `Countdown updated to ${stablePred.label}s`;
+  } else if (isCountLabel) {
+    // A running countdown is locked; only a fist or the cancel key can stop it.
+    if (!state.countdownActive && stablePred.label !== state.lastCommittedLabel) {
+      const now = performance.now() / 1000;
+      if (stablePred.label !== state.armingLabel) {
+        state.armingLabel = stablePred.label;
+        state.armingSince = now;
+      }
+      if (now - state.armingSince >= ARM_HOLD_SECONDS) {
+        state.armingLabel = null;
+        startCountdown(stablePred.label);
+        state.statusText = `${stablePred.label}-second countdown locked in`;
+      } else {
+        state.statusText = `Hold ${stablePred.label} steady…`;
+      }
     }
   } else if (stablePred.label === null && !state.countdownActive && handDetected) {
     state.statusText = "Not stable yet…";
