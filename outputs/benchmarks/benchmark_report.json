@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-22T16:51:29+00:00",
+  "generated_at": "2026-10-23T04:45:58+00:00",
   "system": {
     "platform": "Windows-11-10.0.26300-SP0",
     "processor": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
@@ -10,35 +10,35 @@
     "mediapipe": "0.10.33",
     "opencv": "4.13.0"
   },
-  "model_parameters": 18726,
+  "model_parameters": 21542,
   "classifier": {
     "single_sample": {
       "keras_predict": {
         "n": 250,
-        "mean_ms": 75.83525839971844,
-        "median_ms": 71.42049999674782,
-        "p95_ms": 95.53197999630348,
-        "p99_ms": 162.44172000137007
+        "mean_ms": 68.25736959883943,
+        "median_ms": 63.47669998649508,
+        "p95_ms": 100.05651000683429,
+        "p99_ms": 143.64801699906798
       },
       "keras_call": {
         "n": 1000,
-        "mean_ms": 5.656910800084006,
-        "median_ms": 4.946900007780641,
-        "p95_ms": 8.930925012100488,
-        "p99_ms": 16.035502010054174
+        "mean_ms": 4.475608899723738,
+        "median_ms": 4.279849992599338,
+        "p95_ms": 5.45368999155471,
+        "p99_ms": 7.617150020087137
       },
       "numpy": {
         "n": 10000,
-        "mean_ms": 0.028967530086811168,
-        "median_ms": 0.027599991881288588,
-        "p95_ms": 0.03160000778734684,
-        "p99_ms": 0.04860099172219636
+        "mean_ms": 0.02885778996278532,
+        "median_ms": 0.028499984182417393,
+        "p95_ms": 0.03130000550299883,
+        "p99_ms": 0.036401015240699074
       }
     },
-    "speedup_vs_keras_predict": 2617.940092664166,
+    "speedup_vs_keras_predict": 2365.3013514501063,
     "batch_throughput_samples_per_s": {
-      "keras_predict": 35743.952474220096,
-      "numpy": 909202.6676952397
+      "keras_predict": 35575.24163746273,
+      "numpy": 901770.5186765831
     },
     "batch_size": 3550
   },
@@ -46,58 +46,58 @@
     "frame_resolution": "640x480",
     "hand_detection": {
       "n": 55,
-      "mean_ms": 24.87929636501411,
-      "median_ms": 24.860200006514788,
-      "p95_ms": 25.91633000120055,
-      "p99_ms": 26.326342002430465
+      "mean_ms": 29.997449089370836,
+      "median_ms": 30.138300004182383,
+      "p95_ms": 32.13725998648442,
+      "p99_ms": 33.974639993393794
     },
     "feature_extraction": {
       "n": 55,
-      "mean_ms": 0.022827272186987102,
-      "median_ms": 0.022199994418770075,
-      "p95_ms": 0.025390004157088697,
-      "p99_ms": 0.03561999823432417
+      "mean_ms": 0.5946018177465621,
+      "median_ms": 0.5833000177517533,
+      "p95_ms": 0.6771799904527143,
+      "p99_ms": 0.7261679891962558
     },
     "classification": {
       "n": 55,
-      "mean_ms": 0.0861272726483135,
-      "median_ms": 0.08549999620299786,
-      "p95_ms": 0.09032999369082972,
-      "p99_ms": 0.09303799655754119
+      "mean_ms": 0.07035454671660607,
+      "median_ms": 0.06989997928030789,
+      "p95_ms": 0.07869000837672502,
+      "p99_ms": 0.09709800535347315
     },
-    "total_mean_ms": 24.98825090984941,
-    "max_fps": 40.01880738302649
+    "total_mean_ms": 30.662405453834,
+    "max_fps": 32.61322734465899
   },
   "lighting": {
     "Original": {
       "images": 56,
       "detection_rate": 0.9821428571428571,
-      "accuracy_when_detected": 0.7818181818181819,
-      "end_to_end_accuracy": 0.7678571428571429
+      "accuracy_when_detected": 0.8727272727272727,
+      "end_to_end_accuracy": 0.8571428571428571
     },
     "Dim (40%)": {
       "images": 56,
       "detection_rate": 0.9642857142857143,
-      "accuracy_when_detected": 0.6666666666666666,
-      "end_to_end_accuracy": 0.6428571428571429
+      "accuracy_when_detected": 0.7592592592592593,
+      "end_to_end_accuracy": 0.7321428571428571
     },
     "Very dim (15%)": {
       "images": 56,
       "detection_rate": 0.14285714285714285,
-      "accuracy_when_detected": 0.5,
-      "end_to_end_accuracy": 0.07142857142857142
+      "accuracy_when_detected": 0.625,
+      "end_to_end_accuracy": 0.08928571428571429
     },
     "Overexposed": {
       "images": 56,
       "detection_rate": 0.8571428571428571,
-      "accuracy_when_detected": 0.7291666666666666,
-      "end_to_end_accuracy": 0.625
+      "accuracy_when_detected": 0.8333333333333334,
+      "end_to_end_accuracy": 0.7142857142857143
     },
     "Low contrast": {
       "images": 56,
       "detection_rate": 0.7678571428571429,
-      "accuracy_when_detected": 0.7209302325581395,
-      "end_to_end_accuracy": 0.5535714285714286
+      "accuracy_when_detected": 0.7441860465116279,
+      "end_to_end_accuracy": 0.5714285714285714
     },
     "Sensor noise": {
       "images": 56,
@@ -108,8 +108,8 @@
     "Motion blur": {
       "images": 56,
       "detection_rate": 0.8928571428571429,
-      "accuracy_when_detected": 0.72,
-      "end_to_end_accuracy": 0.6428571428571429
+      "accuracy_when_detected": 0.82,
+      "end_to_end_accuracy": 0.7321428571428571
     }
   },
   "lighting_note": "56 held-out webcam frames (labels 1-5) from the test split; conditions are simulated with photometric transforms.",
@@ -122,58 +122,84 @@
       {
         "sigma": 0.0,
         "sigma_pixels_at_640": 0.0,
-        "per_frame_accuracy": 0.9771830985915493,
-        "per_frame_error_rate": 0.022816901408450718,
-        "stabilised_accuracy_when_committed": 0.9801136363636364,
-        "stabilised_false_trigger_rate": 0.01971830985915493,
-        "abstain_rate": 0.008450704225352101
+        "per_frame_accuracy": 0.9667605633802817,
+        "per_frame_error_rate": 0.03323943661971829,
+        "stabilised_accuracy_when_committed": 0.9751499571550986,
+        "stabilised_false_trigger_rate": 0.024507042253521127,
+        "abstain_rate": 0.013802816901408499
       },
       {
         "sigma": 0.003125,
         "sigma_pixels_at_640": 2.0,
-        "per_frame_accuracy": 0.9755633802816901,
-        "per_frame_error_rate": 0.024436619718309904,
-        "stabilised_accuracy_when_committed": 0.9784397163120567,
-        "stabilised_false_trigger_rate": 0.02140845070422535,
-        "abstain_rate": 0.007042253521126751
+        "per_frame_accuracy": 0.9645070422535211,
+        "per_frame_error_rate": 0.03549295774647887,
+        "stabilised_accuracy_when_committed": 0.9715828360329639,
+        "stabilised_false_trigger_rate": 0.028169014084507043,
+        "abstain_rate": 0.008732394366197216
       },
       {
         "sigma": 0.00625,
         "sigma_pixels_at_640": 4.0,
-        "per_frame_accuracy": 0.9745070422535211,
-        "per_frame_error_rate": 0.02549295774647886,
-        "stabilised_accuracy_when_committed": 0.9773242630385488,
-        "stabilised_false_trigger_rate": 0.022535211267605635,
-        "abstain_rate": 0.006197183098591519
+        "per_frame_accuracy": 0.9551056338028169,
+        "per_frame_error_rate": 0.04489436619718312,
+        "stabilised_accuracy_when_committed": 0.9651162790697675,
+        "stabilised_false_trigger_rate": 0.03464788732394366,
+        "abstain_rate": 0.006760563380281637
       },
       {
         "sigma": 0.0125,
         "sigma_pixels_at_640": 8.0,
-        "per_frame_accuracy": 0.9685915492957746,
-        "per_frame_error_rate": 0.03140845070422538,
-        "stabilised_accuracy_when_committed": 0.9756718528995757,
-        "stabilised_false_trigger_rate": 0.024225352112676058,
-        "abstain_rate": 0.004225352112676051
+        "per_frame_accuracy": 0.9066901408450704,
+        "per_frame_error_rate": 0.09330985915492962,
+        "stabilised_accuracy_when_committed": 0.9482660602615123,
+        "stabilised_false_trigger_rate": 0.05126760563380282,
+        "abstain_rate": 0.00901408450704222
       },
       {
         "sigma": 0.01875,
         "sigma_pixels_at_640": 12.0,
-        "per_frame_accuracy": 0.9605985915492957,
-        "per_frame_error_rate": 0.03940140845070428,
-        "stabilised_accuracy_when_committed": 0.9725523486134692,
-        "stabilised_false_trigger_rate": 0.02732394366197183,
-        "abstain_rate": 0.004507042253521165
+        "per_frame_accuracy": 0.8080985915492958,
+        "per_frame_error_rate": 0.19190140845070425,
+        "stabilised_accuracy_when_committed": 0.9046933486898935,
+        "stabilised_false_trigger_rate": 0.09323943661971831,
+        "abstain_rate": 0.02169014084507037
       },
       {
         "sigma": 0.025,
         "sigma_pixels_at_640": 16.0,
-        "per_frame_accuracy": 0.9466197183098591,
-        "per_frame_error_rate": 0.05338028169014086,
-        "stabilised_accuracy_when_committed": 0.9677328049816021,
-        "stabilised_false_trigger_rate": 0.03211267605633803,
-        "abstain_rate": 0.004788732394366169
+        "per_frame_accuracy": 0.6806690140845071,
+        "per_frame_error_rate": 0.3193309859154929,
+        "stabilised_accuracy_when_committed": 0.8382177033492823,
+        "stabilised_false_trigger_rate": 0.1523943661971831,
+        "abstain_rate": 0.058028169014084474
       }
     ],
     "note": "Each test sample is replayed as an 8-frame window with i.i.d. Gaussian jitter added to every landmark's x/y position (std. dev. in pixels at 640 px width)."
+  },
+  "framing": {
+    "samples": 3550,
+    "results": {
+      "As captured": {
+        "accuracy": 0.9667605633802817,
+        "four_read_as_five": 2
+      },
+      "Off-centre": {
+        "accuracy": 0.9667605633802817,
+        "four_read_as_five": 2
+      },
+      "Further away": {
+        "accuracy": 0.9667605633802817,
+        "four_read_as_five": 2
+      },
+      "Closer": {
+        "accuracy": 0.9667605633802817,
+        "four_read_as_five": 2
+      },
+      "Mixed": {
+        "accuracy": 0.9667605633802817,
+        "four_read_as_five": 2
+      }
+    },
+    "note": "Test-set hands are shifted (up to the given fraction of the frame) and re-scaled about the wrist before classification."
   }
 }

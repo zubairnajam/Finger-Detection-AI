@@ -58,6 +58,7 @@ from src.config import (
     ROLLING_WINDOW_SIZE,
     TEST_DIR,
 )
+from src.features import build_features, image_aspects
 from src.hand_detection import build_detector, flatten_landmarks
 from src.inference import NumpyMLP
 
@@ -209,7 +210,8 @@ def bench_images(numpy_model, mean, std, images: list[tuple[Path, int]], seed: i
                 t0 = time.perf_counter()
                 result = detector.detect(mp_image)
                 t1 = time.perf_counter()
-                features = flatten_landmarks(result)
+                raw = flatten_landmarks(result)
+                features = None if raw is None else build_features(raw, img.shape[1] / img.shape[0])
                 t2 = time.perf_counter()
                 if features is None:
                     continue
@@ -273,7 +275,7 @@ def stable_vote(labels: np.ndarray, confs: np.ndarray) -> tuple[np.ndarray, np.n
     return np.where(committed, winner, -1), committed
 
 
-def bench_temporal(numpy_model, mean, std, x_raw: np.ndarray, y: np.ndarray, seed: int) -> dict:
+def bench_temporal(numpy_model, mean, std, x_raw: np.ndarray, aspects: np.ndarray, y: np.ndarray, seed: int) -> dict:
     rng = np.random.default_rng(seed)
     results = []
     xy_mask = np.ones(x_raw.shape[1], dtype=np.float32)
@@ -282,7 +284,8 @@ def bench_temporal(numpy_model, mean, std, x_raw: np.ndarray, y: np.ndarray, see
         sigma = pixels / REFERENCE_WIDTH_PX
         noise = rng.normal(0, sigma, (len(x_raw), ROLLING_WINDOW_SIZE, x_raw.shape[1])) * xy_mask
         frames = x_raw[:, None, :] + noise
-        probs = numpy_model.predict_proba(((frames - mean) / std).reshape(-1, x_raw.shape[1]))
+        feats = build_features(frames.reshape(-1, x_raw.shape[1]), np.repeat(aspects, ROLLING_WINDOW_SIZE))
+        probs = numpy_model.predict_proba((feats - mean) / std)
         probs = probs.reshape(len(x_raw), ROLLING_WINDOW_SIZE, -1)
         frame_labels = probs.argmax(2)
         frame_conf = probs.max(2)
@@ -312,6 +315,44 @@ def bench_temporal(numpy_model, mean, std, x_raw: np.ndarray, y: np.ndarray, see
         "results": results,
         "note": "Each test sample is replayed as an 8-frame window with i.i.d. Gaussian "
                 "jitter added to every landmark's x/y position (std. dev. in pixels at 640 px width).",
+    }
+
+
+# ── 4. Framing robustness ───────────────────────────────────────────────────
+
+# name -> (max shift as a fraction of the frame, min scale, max scale)
+FRAMING_LEVELS = {
+    "As captured": (0.0, 1.0, 1.0),
+    "Off-centre": (0.2, 1.0, 1.0),
+    "Further away": (0.0, 0.55, 0.75),
+    "Closer": (0.0, 1.25, 1.4),
+    "Mixed": (0.25, 0.6, 1.3),
+}
+
+
+def bench_framing(numpy_model, mean, std, x_raw: np.ndarray, aspects: np.ndarray, y: np.ndarray, seed: int) -> dict:
+    """Accuracy when test hands are moved and resized in the frame, as happens on a real webcam."""
+    rng = np.random.default_rng(seed)
+    results = {}
+    for name, (shift, lo, hi) in FRAMING_LEVELS.items():
+        points = x_raw.reshape(-1, 21, 3).copy()
+        scale = rng.uniform(lo, hi, len(points))[:, None, None]
+        wrist = points[:, :1, :2].copy()
+        points[:, :, :2] = (points[:, :, :2] - wrist) * scale + wrist
+        points[:, :, 2:] *= scale
+        points[:, :, :2] += rng.uniform(-shift, shift, (len(points), 1, 2))
+        feats = build_features(points.reshape(len(points), -1), aspects)
+        pred = np.array(LABELS)[numpy_model.predict_proba((feats - mean) / std).argmax(1)]
+        results[name] = {
+            "accuracy": float((pred == y).mean()),
+            "four_read_as_five": int(((y == 4) & (pred == 5)).sum()),
+        }
+        print(f"  {name:<13} accuracy {results[name]['accuracy']:6.2%}")
+    return {
+        "samples": int(len(x_raw)),
+        "results": results,
+        "note": "Test-set hands are shifted (up to the given fraction of the frame) and re-scaled "
+                "about the wrist before classification.",
     }
 
 
@@ -466,6 +507,13 @@ def write_markdown(report: dict, out: Path) -> None:
         lines.append(f"| {r['sigma_pixels_at_640']:.1f} | {r['per_frame_error_rate']:.2%} | "
                      f"{r['stabilised_false_trigger_rate']:.2%} | {r['abstain_rate']:.1%} |")
     lines.append("")
+
+    if "framing" in report:
+        f = report["framing"]
+        lines += ["## Framing robustness", "", f["note"], "", "| Framing | Accuracy | 4 read as 5 |", "|---|---|---|"]
+        for name, r in f["results"].items():
+            lines.append(f"| {name} | {r['accuracy']:.1%} | {r['four_read_as_five']} |")
+        lines.append("")
     out.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -487,7 +535,12 @@ def main(argv: list[str] | None = None) -> None:
     keras_model, numpy_model, mean, std = load_models()
     x_raw = np.load(x_path).astype(np.float32)
     y = np.load(TEST_DIR / "y_test.npy")
-    x_scaled = (x_raw - mean) / std
+    aspects = np.ones(len(x_raw), dtype=np.float32)
+    csv_path = TEST_DIR / "test_landmarks.csv"
+    if csv_path.exists():
+        with csv_path.open(encoding="utf-8") as handle:
+            aspects = image_aspects(row["image_path"] for row in csv.DictReader(handle))
+    x_scaled = (build_features(x_raw, aspects) - mean) / std
 
     report: dict = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -495,19 +548,22 @@ def main(argv: list[str] | None = None) -> None:
         "model_parameters": numpy_model.count_params(),
     }
 
-    print("\n[1/3] Classifier latency")
+    print("\n[1/4] Classifier latency")
     report["classifier"] = bench_classifier(keras_model, numpy_model, x_scaled, runs)
     print(f"  -> {report['classifier']['speedup_vs_keras_predict']:,.0f}x speed-up")
 
     images = [] if args.skip_images else held_out_webcam_images()
     if images:
-        print(f"\n[2/3] Pipeline latency + lighting robustness ({len(images)} held-out frames)")
+        print(f"\n[2/4] Pipeline latency + lighting robustness ({len(images)} held-out frames)")
         report.update(bench_images(numpy_model, mean, std, images, args.seed))
     else:
-        print("\n[2/3] Skipped image benchmarks (no held-out webcam frames found or --skip-images)")
+        print("\n[2/4] Skipped image benchmarks (no held-out webcam frames found or --skip-images)")
 
-    print("\n[3/3] Temporal stability under landmark jitter")
-    report["temporal"] = bench_temporal(numpy_model, mean, std, x_raw, y, args.seed)
+    print("\n[3/4] Temporal stability under landmark jitter")
+    report["temporal"] = bench_temporal(numpy_model, mean, std, x_raw, aspects, y, args.seed)
+
+    print("\n[4/4] Framing robustness (hand moved / resized in frame)")
+    report["framing"] = bench_framing(numpy_model, mean, std, x_raw, aspects, y, args.seed)
 
     (BENCHMARK_DIR / "benchmark_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     write_markdown(report, BENCHMARK_DIR / "benchmark_report.md")

@@ -1,10 +1,11 @@
 {
   "train_samples": 17578,
+  "augmented_fit_samples": 84372,
   "validation_samples": 3516,
   "test_samples": 3550,
-  "feature_size": 63,
-  "epochs_ran": 56,
-  "test_accuracy": 0.9771830985915493,
+  "feature_size": 85,
+  "epochs_ran": 58,
+  "test_accuracy": 0.9667605633802817,
   "class_weights": {
     "0": 1.2792940320232897,
     "1": 0.9668591859185919,

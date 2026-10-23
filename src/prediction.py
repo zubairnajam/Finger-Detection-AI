@@ -18,6 +18,7 @@ from src.config import (
     SCALER_PATH,
     StablePrediction,
 )
+from src.features import build_features
 from src.inference import NumpyMLP, UnsupportedModelError
 
 if TYPE_CHECKING:
@@ -75,24 +76,29 @@ def backend_name(model: "Classifier") -> str:
 
 
 def predict_probabilities(
-    features: np.ndarray,
+    landmarks: np.ndarray,
     model: "Classifier",
     mean: np.ndarray,
     std: np.ndarray,
+    aspect: float = 1.0,
 ) -> np.ndarray:
-    """Return the per-class probability vector for one landmark feature vector."""
-    scaled = (features - mean) / std
+    """Return the per-class probability vector for one raw 63-value landmark vector.
+
+    ``aspect`` is the frame's width / height (see ``src.features.build_features``).
+    """
+    scaled = (build_features(landmarks, aspect) - mean) / std
     return np.asarray(model.predict(scaled.reshape(1, -1), verbose=0)[0])
 
 
 def predict_finger_count(
-    features: np.ndarray,
+    landmarks: np.ndarray,
     model: "Classifier",
     mean: np.ndarray,
     std: np.ndarray,
+    aspect: float = 1.0,
 ) -> tuple[int, float]:
-    """Predict finger count and confidence from landmark features."""
-    probabilities = predict_probabilities(features, model, mean, std)
+    """Predict finger count and confidence from raw landmarks."""
+    probabilities = predict_probabilities(landmarks, model, mean, std, aspect)
     predicted_index = int(np.argmax(probabilities))
     return LABELS[predicted_index], float(probabilities[predicted_index])
 

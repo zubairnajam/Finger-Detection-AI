@@ -21,21 +21,20 @@ const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.1
 const HAND_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
-// Hand topology (MediaPipe 21-point), grouped by finger for colour-coding
-const FINGERS = [
-  { chain: [0, 1, 2, 3, 4], color: "#ff7a5a" },
-  { chain: [0, 5, 6, 7, 8], color: "#ffd23c" },
-  { chain: [9, 10, 11, 12], color: "#78ff78" },
-  { chain: [13, 14, 15, 16], color: "#3cd2ff" },
-  { chain: [0, 17, 18, 19, 20], color: "#c878ff" },
-];
+// Hand topology (MediaPipe 21-point)
+const FINGERS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [0, 17, 18, 19, 20]];
 const PALM = [5, 9, 13, 17];
+const FINGERTIPS = [4, 8, 12, 16, 20];
+const ACCENT = "#ff6b3d";
 
-// Chart palette (validated categorical slots, dark-surface steps) + inks
-const C_BLUE = "#3987e5";
-const C_ORANGE = "#d95926";
-const INK_2 = "#94a3b8";
+// Chart palette: two series validated for CVD separation on the dark surface
+const SERIES_1 = "#e8603a";
+const SERIES_2 = "#9085e9";
+const INK_1 = "#ededed";
+const INK_2 = "#a1a1aa";
+const INK_3 = "#6b6b74";
 const GRID = "rgba(255,255,255,0.06)";
+const SURFACE = "#0b0b0d";
 
 // ── State ───────────────────────────────────────────────────
 let mlp = null;                 // trained classifier (JS engine)
@@ -266,28 +265,19 @@ function drawSkeleton(landmarks) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  ctx.strokeStyle = "rgba(255,255,255,0.55)";
-  ctx.lineWidth = 3 * s;
+  ctx.strokeStyle = "rgba(237,237,237,0.85)";
+  ctx.lineWidth = 2.5 * s;
   ctx.beginPath();
   PALM.forEach((i, k) => (k ? ctx.lineTo(...pt(i)) : ctx.moveTo(...pt(i))));
+  for (const chain of FINGERS) chain.forEach((i, k) => (k ? ctx.lineTo(...pt(i)) : ctx.moveTo(...pt(i))));
   ctx.stroke();
 
-  for (const { chain, color } of FINGERS) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4 * s;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8 * s;
-    ctx.beginPath();
-    chain.forEach((i, k) => (k ? ctx.lineTo(...pt(i)) : ctx.moveTo(...pt(i))));
-    ctx.stroke();
-  }
-  ctx.shadowBlur = 0;
-
-  ctx.fillStyle = "#fff";
   for (let i = 0; i < landmarks.length; i++) {
     const [x, y] = pt(i);
+    const tip = FINGERTIPS.includes(i);
+    ctx.fillStyle = tip ? ACCENT : "#ededed";
     ctx.beginPath();
-    ctx.arc(x, y, ([4, 8, 12, 16, 20].includes(i) ? 6 : 3.5) * s, 0, Math.PI * 2);
+    ctx.arc(x, y, (tip ? 6 : 3.5) * s, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -395,7 +385,7 @@ function processFrame() {
         features[i * 3 + 1] = lm[i].y;
         features[i * 3 + 2] = lm[i].z;
       }
-      raw = mlp.predict(features);
+      raw = mlp.predict(features, video.videoWidth / video.videoHeight);
       const dt = performance.now() - t2;
       state.classifyMs = state.classifyMs ? (1 - EMA) * state.classifyMs + EMA * dt : dt;
     } else {
@@ -592,7 +582,7 @@ function renderModalGrid() {
     img.alt = photo.name;
     const check = document.createElement("span");
     check.className = "thumb-check";
-    check.textContent = "✓";
+    check.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
     const label = document.createElement("span");
     label.className = "thumb-label";
     label.textContent = photo.timestamp;
@@ -652,10 +642,10 @@ function deleteSelected() {
 
 // ── Metrics, charts & benchmarks (from web/metrics.json) ────
 const FALLBACK_METRICS = {
-  accuracy: 97.72, test_samples: 3550, macro_f1: 97.77, model_parameters: 18726,
-  mean_latency_ms: 0.0366, keras_predict_latency_ms: 93.87,
-  per_source: { archive: { samples: 3444, accuracy: 97.97 }, webcam: { samples: 106, accuracy: 89.62 } },
-  f1_scores: [0.9916, 0.9820, 0.9599, 0.9600, 0.9766, 0.9960],
+  accuracy: 96.68, test_samples: 3550, macro_f1: 96.72, model_parameters: 21542,
+  mean_latency_ms: 0.0305, keras_predict_latency_ms: 68.26,
+  per_source: { archive: { samples: 3444, accuracy: 96.69 }, webcam: { samples: 106, accuracy: 96.23 } },
+  f1_scores: [0.9791, 0.9739, 0.9420, 0.9392, 0.9738, 0.9952],
   f1_labels: ["0 (Fist)", "1 (Index)", "2 (Peace)", "3 (Three)", "4 (Four)", "5 (Open Hand)"],
   classes: [],
   confusion_matrix: null,
@@ -680,7 +670,10 @@ function baseChartOptions() {
     animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? false : { duration: 700 },
     plugins: {
       legend: { labels: { color: INK_2, boxWidth: 12, boxHeight: 12, useBorderRadius: true, borderRadius: 3 } },
-      tooltip: { backgroundColor: "rgba(15,20,35,0.95)", borderColor: "rgba(255,255,255,0.1)", borderWidth: 1, padding: 10 },
+      tooltip: {
+        backgroundColor: "rgba(17,17,20,0.96)", borderColor: "rgba(255,255,255,0.12)", borderWidth: 1, padding: 10,
+        titleColor: INK_1, bodyColor: INK_2, titleFont: { family: "Geist Mono", weight: "500" }, bodyFont: { family: "Geist Mono" },
+      },
     },
     scales: {
       x: { ticks: { color: INK_2, font: { size: 11 } }, grid: { display: false } },
@@ -691,7 +684,8 @@ function baseChartOptions() {
 
 function renderHeadlineMetrics(m) {
   const b = m.benchmarks;
-  setTxt("hero-accuracy", fmt.pct(m.accuracy));
+  // The hero shows accuracy on webcam images: the domain the app runs in.
+  setTxt("hero-accuracy", fmt.pct(m.per_source?.webcam?.accuracy ?? m.accuracy));
   setTxt("metric-accuracy", fmt.pct(m.accuracy));
   document.getElementById("metric-accuracy-bar")?.style.setProperty("--fill", `${m.accuracy}%`);
   setTxt("metric-accuracy-detail",
@@ -738,7 +732,7 @@ function renderBenchmarks(b) {
         grid: { color: GRID },
       },
       y: {
-        ticks: { color: "#e2e8f0", font: { size: 12 }, padding: 8 },
+        ticks: { color: INK_1, font: { size: 12, family: "Geist Mono" }, padding: 8 },
         grid: { display: false },
         afterFit: (axis) => { axis.width = Math.max(axis.width, window.innerWidth < 600 ? 150 : 210); },
       },
@@ -747,7 +741,7 @@ function renderBenchmarks(b) {
       type: "bar",
       data: {
         labels: [`keras.predict()  ·  ${fmt.ms(lat.keras_predict)}`, `keras model(x)  ·  ${fmt.ms(lat.keras_call)}`, `NumPy engine  ·  ${fmt.ms(lat.numpy)}`],
-        datasets: [{ data: [lat.keras_predict, lat.keras_call, lat.numpy], backgroundColor: [C_BLUE, C_BLUE, "#00d4ff"], borderRadius: 4, barThickness: 22 }],
+        datasets: [{ data: [lat.keras_predict, lat.keras_call, lat.numpy], backgroundColor: [SERIES_2, SERIES_2, SERIES_1], borderRadius: 4, barThickness: 22 }],
       },
       options: opts,
     });
@@ -767,8 +761,8 @@ function renderBenchmarks(b) {
       data: {
         labels: b.lighting.map((r) => r.condition),
         datasets: [
-          { label: "Hand detected", data: b.lighting.map((r) => r.detection_rate), backgroundColor: C_BLUE, borderRadius: 4 },
-          { label: "Correct count (end-to-end)", data: b.lighting.map((r) => r.accuracy), backgroundColor: C_ORANGE, borderRadius: 4 },
+          { label: "Hand detected", data: b.lighting.map((r) => r.detection_rate), backgroundColor: SERIES_2, borderRadius: 4, borderColor: SURFACE, borderWidth: { left: 1, right: 1 } },
+          { label: "Correct count (end-to-end)", data: b.lighting.map((r) => r.accuracy), backgroundColor: SERIES_1, borderRadius: 4, borderColor: SURFACE, borderWidth: { left: 1, right: 1 } },
         ],
       },
       options: opts,
@@ -792,15 +786,15 @@ function renderBenchmarks(b) {
     opts.plugins.tooltip.callbacks = { title: (c) => `${c[0].label} px jitter`, label: (c) => ` ${c.dataset.label}: ${c.raw}%` };
     const line = (label, data, color) => ({
       label, data, borderColor: color, backgroundColor: color, borderWidth: 2,
-      pointRadius: 4, pointHoverRadius: 6, pointBorderColor: "#0a0e1a", pointBorderWidth: 2, tension: 0.25,
+      pointRadius: 4, pointHoverRadius: 6, pointBorderColor: SURFACE, pointBorderWidth: 2, tension: 0.25,
     });
     new Chart(tempEl, {
       type: "line",
       data: {
         labels: b.temporal.map((r) => r.jitter_px),
         datasets: [
-          line("Single frame", b.temporal.map((r) => r.single_frame_err), C_ORANGE),
-          line("8-frame rolling vote", b.temporal.map((r) => r.voted_err), C_BLUE),
+          line("Single frame", b.temporal.map((r) => r.single_frame_err), SERIES_2),
+          line("8-frame rolling vote", b.temporal.map((r) => r.voted_err), SERIES_1),
         ],
       },
       options: opts,
@@ -819,9 +813,9 @@ function renderBenchmarks(b) {
   if (p && bar && legend) {
     const other = Math.max(p.total_ms - p.detect_ms - p.classify_ms, 0);
     const parts = [
-      { name: "Hand detection (MediaPipe)", ms: p.detect_ms, color: C_BLUE },
-      { name: "Feature extraction", ms: other, color: "#64748b" },
-      { name: "MLP classification", ms: p.classify_ms, color: "#00d4ff" },
+      { name: "Hand detection (MediaPipe)", ms: p.detect_ms, color: SERIES_2 },
+      { name: "Feature extraction", ms: other, color: INK_3 },
+      { name: "MLP classification", ms: p.classify_ms, color: SERIES_1 },
     ];
     bar.innerHTML = parts.map((x) =>
       `<span style="flex-grow:${Math.max(x.ms, p.total_ms * 0.006)};background:${x.color}" title="${x.name}: ${fmt.ms(x.ms)}"></span>`).join("");
@@ -844,7 +838,7 @@ function renderResults(m) {
     opts.scales.y.ticks.callback = (v) => `${(v * 100).toFixed(0)}%`;
     new Chart(f1El, {
       type: "bar",
-      data: { labels: m.f1_labels, datasets: [{ label: "F1", data: m.f1_scores, backgroundColor: C_BLUE, borderRadius: 4, maxBarThickness: 48 }] },
+      data: { labels: m.f1_labels, datasets: [{ label: "F1", data: m.f1_scores, backgroundColor: SERIES_1, borderRadius: 4, maxBarThickness: 48 }] },
       options: opts,
     });
   }
@@ -873,8 +867,8 @@ function renderResults(m) {
         const val = cm[r][c];
         const frac = val / rowTotal;
         const bg = r === c
-          ? `rgba(57,135,229,${(0.2 + frac * 0.75).toFixed(2)})`
-          : val > 0 ? `rgba(217,89,38,${Math.min(0.15 + frac * 6, 0.9).toFixed(2)})` : "rgba(255,255,255,0.025)";
+          ? `rgba(232,96,58,${(0.15 + frac * 0.7).toFixed(2)})`
+          : val > 0 ? `rgba(144,133,233,${Math.min(0.15 + frac * 6, 0.85).toFixed(2)})` : "rgba(255,255,255,0.025)";
         html += `<div class="cm-cell${val === 0 ? " zero" : ""}" style="background:${bg}"
           title="True ${r} (${CLASS_NAMES[r]}) → predicted ${c} (${CLASS_NAMES[c]}): ${val} (${(frac * 100).toFixed(1)}% of row)">${val}</div>`;
       }
@@ -888,7 +882,7 @@ function renderResults(m) {
   const domain = document.getElementById("domain-bars");
   const src = m.per_source || {};
   if (domain && Object.keys(src).length) {
-    const label = { archive: "Public dataset (archive)", webcam: "Own webcam captures" };
+    const label = { archive: "Public dataset", webcam: "Webcam captures" };
     domain.innerHTML = Object.entries(src).map(([k, v]) => `
       <div class="domain-row">
         <span class="domain-label">${label[k] || k} <small>${fmt.int(v.samples)} samples</small></span>
@@ -909,7 +903,7 @@ async function loadMetricsAndInitCharts() {
     console.warn("[metrics] metrics.json not found, using built-in defaults.");
   }
   if (typeof Chart !== "undefined") {
-    Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+    Chart.defaults.font.family = "Geist, system-ui, sans-serif";
     Chart.defaults.color = INK_2;
   }
   renderHeadlineMetrics(m);

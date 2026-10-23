@@ -215,7 +215,8 @@ def main(argv: Optional[list[str]] = None) -> None:
             # ── Classification ──────────────────────────────────────────
             if features is not None:
                 t0 = time.perf_counter()
-                probabilities = predict_probabilities(features, model, mean, std)
+                aspect = raw_frame.shape[1] / raw_frame.shape[0]
+                probabilities = predict_probabilities(features, model, mean, std, aspect)
                 classify_ms = (time.perf_counter() - t0) * 1000.0
                 telemetry.classify_ms = _ema(telemetry.classify_ms, classify_ms)
                 classify_total_ms += classify_ms

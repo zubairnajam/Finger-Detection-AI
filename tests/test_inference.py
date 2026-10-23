@@ -1,9 +1,12 @@
 """NumPy inference engine: correctness against Keras and serialisation."""
 
+import csv
+
 import numpy as np
 import pytest
 
 from src.config import LABELS, TEST_DIR
+from src.features import FEATURE_SIZE, build_features, image_aspects
 from src.inference import DenseLayer, NumpyMLP, UnsupportedModelError
 from src.prediction import (
     load_model_and_scaler,
@@ -57,11 +60,11 @@ def test_empty_network_rejected():
 
 def test_matches_keras_on_trained_model(keras_model):
     mlp = NumpyMLP.from_keras(keras_model)
-    assert mlp.input_dim == 63
+    assert mlp.input_dim == FEATURE_SIZE
     assert mlp.num_classes == len(LABELS)
     assert mlp.count_params() == keras_model.count_params()
 
-    x = np.random.default_rng(0).normal(size=(256, 63)).astype(np.float32)
+    x = np.random.default_rng(0).normal(size=(256, FEATURE_SIZE)).astype(np.float32)
     expected = keras_model.predict(x, verbose=0)
     actual = mlp.predict(x, verbose=0)
     np.testing.assert_allclose(actual, expected, atol=1e-5)
@@ -74,7 +77,13 @@ def test_matches_keras_on_real_test_set(keras_model):
         pytest.skip("Test split not present (data/ is git-ignored)")
 
     model, mean, std = load_model_and_scaler(backend="numpy")
-    x = (np.load(x_path) - mean) / std
+    raw = np.load(x_path)
+    aspects = np.ones(len(raw), dtype=np.float32)
+    csv_path = TEST_DIR / "test_landmarks.csv"
+    if csv_path.exists():
+        with csv_path.open(encoding="utf-8") as handle:
+            aspects = image_aspects(row["image_path"] for row in csv.DictReader(handle))
+    x = (build_features(raw, aspects) - mean) / std
     y = np.load(y_path)
 
     keras_pred = keras_model.predict(x, verbose=0).argmax(1)

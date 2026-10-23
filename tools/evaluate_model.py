@@ -37,6 +37,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.config import CLASS_NAMES, EVALUATION_DIR, LABELS, TEST_DIR
+from src.features import build_features, image_aspects
 from src.prediction import load_model_and_scaler
 
 
@@ -45,9 +46,17 @@ def ensure_dirs() -> None:
 
 
 def load_test_set():
-    x_test = np.load(TEST_DIR / "X_test.npy")
+    """Return model-ready test features (see src/features.py) and labels."""
+    raw_test = np.load(TEST_DIR / "X_test.npy")
     y_test = np.load(TEST_DIR / "y_test.npy")
-    return x_test, y_test
+    aspects = np.ones(len(raw_test), dtype=np.float32)
+    csv_path = TEST_DIR / "test_landmarks.csv"
+    if csv_path.exists():
+        with csv_path.open(encoding="utf-8") as handle:
+            from_csv = image_aspects(row["image_path"] for row in csv.DictReader(handle))
+        if len(from_csv) == len(raw_test):
+            aspects = from_csv
+    return build_features(raw_test, aspects), y_test
 
 
 def load_test_sources(n_rows: int) -> list[str] | None:

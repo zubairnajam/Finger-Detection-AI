@@ -3,69 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FingerDetect AI — Gesture-Controlled Smart Camera</title>
-  <meta name="description" content="Real-time gesture-controlled camera: MediaPipe hand landmarks + a neural-network finger-count classifier running entirely in your browser. 97.7% test accuracy, 40 FPS pipeline.">
-  <meta name="theme-color" content="#0a0e1a">
-  <meta property="og:title" content="FingerDetect AI — Gesture-Controlled Smart Camera">
-  <meta property="og:description" content="Hold up 1–5 fingers to trigger a countdown photo. On-device ML, benchmarked end to end.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐️</text></svg>">
+  <title>FingerDetect — Gesture-Controlled Camera</title>
+  <meta name="description" content="A webcam camera you control with one hand. MediaPipe hand tracking and a custom neural network count your fingers in real time, entirely in the browser.">
+  <meta name="theme-color" content="#0b0b0d">
+  <meta property="og:title" content="FingerDetect — Gesture-Controlled Camera">
+  <meta property="og:description" content="Hold up one to five fingers to start a countdown photo. On-device ML, benchmarked end to end.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230b0b0d'/><circle cx='16' cy='22' r='2.5' fill='%23ff6b3d'/><g stroke='%23ededed' stroke-width='2' stroke-linecap='round'><path d='M16 22 9 11M16 22 13 7M16 22l3-15M16 22l7-11'/></g></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <a class="skip-link" href="#demo">Skip to live demo</a>
 
+  <canvas id="bg-field" aria-hidden="true"></canvas>
+  <div class="cursor-ring" id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- SVG icon sprite -->
+  <svg width="0" height="0" class="sprite" aria-hidden="true">
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 .5a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></symbol>
+  </svg>
+
   <!-- ── Navigation ──────────────────────────────────────────── -->
   <nav id="main-nav" aria-label="Main">
     <div class="nav-inner">
-      <a href="#" class="nav-logo">🖐️ FingerDetect<span class="accent">AI</span></a>
+      <a href="#" class="wordmark" aria-label="FingerDetect home">
+        <svg class="wordmark-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="22" r="2.5" class="mark-dot"/><path d="M16 22 9 11M16 22 13 7M16 22l3-15M16 22l7-11"/></svg>
+        FingerDetect
+      </a>
       <ul class="nav-links">
-        <li><a href="#demo">Live Demo</a></li>
+        <li><a href="#demo">Demo</a></li>
         <li><a href="#metrics">Metrics</a></li>
         <li><a href="#benchmarks">Benchmarks</a></li>
-        <li><a href="#results">Results</a></li>
+        <li><a href="#results">Evaluation</a></li>
         <li><a href="#engineering">Engineering</a></li>
-        <li><a href="https://github.com/zubairnajam/Finger-Detection-AI" class="nav-cta" target="_blank" rel="noopener">GitHub ↗</a></li>
       </ul>
+      <a href="https://github.com/zubairnajam/Finger-Detection-AI" class="nav-github" target="_blank" rel="noopener">
+        <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span>Source</span>
+      </a>
     </div>
   </nav>
 
   <!-- ── Hero ────────────────────────────────────────────────── -->
   <header id="hero">
-    <div class="hero-bg-grid" aria-hidden="true"></div>
-    <div class="hero-glow" aria-hidden="true"></div>
-    <div class="hero-content">
-      <div class="hero-badge"><span class="pulse-dot"></span> On-device ML · runs entirely in your browser</div>
-      <h1>Finger Detection<br><span class="gradient-text">Smart Camera</span></h1>
-      <p class="hero-subtitle">Real-time hand tracking and finger counting with MediaPipe and a custom neural network. Hold up 1–5 fingers to start a countdown photo, or make a fist to cancel.</p>
-      <div class="hero-buttons">
-        <a href="#demo" class="btn btn-primary btn-lg">Try the live demo</a>
-        <a href="#benchmarks" class="btn btn-outline btn-lg">See benchmarks</a>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="kicker"><span class="kicker-dot"></span>Real-time gesture camera · runs on-device</p>
+        <h1>A camera you<br>control with <em>one hand.</em></h1>
+        <p class="hero-sub">Hold up one to five fingers and it counts down and takes the photo. Hand tracking and a custom neural network run entirely in your browser, in about 30&nbsp;ms per frame.</p>
+        <div class="hero-actions">
+          <a href="#demo" class="btn btn-primary btn-lg">Open the camera <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a href="#benchmarks" class="btn btn-ghost btn-lg">Read the benchmarks</a>
+        </div>
+        <dl class="hero-stats">
+          <div><dt>Webcam accuracy</dt><dd id="hero-accuracy">96.2%</dd></div>
+          <div><dt>Pipeline per frame</dt><dd id="hero-latency">31 ms</dd></div>
+          <div><dt>Classifier speed-up</dt><dd id="hero-speedup">2,365×</dd></div>
+        </dl>
       </div>
-      <dl class="hero-stats">
-        <div class="hero-stat"><dt class="hero-stat-label">Test accuracy</dt><dd class="hero-stat-value" id="hero-accuracy">97.7%</dd></div>
-        <div class="hero-stat-divider" aria-hidden="true"></div>
-        <div class="hero-stat"><dt class="hero-stat-label">Pipeline / frame</dt><dd class="hero-stat-value" id="hero-latency">25 ms</dd></div>
-        <div class="hero-stat-divider" aria-hidden="true"></div>
-        <div class="hero-stat"><dt class="hero-stat-label">Classifier speed-up</dt><dd class="hero-stat-value" id="hero-speedup">2,600×</dd></div>
-      </dl>
+
+      <figure class="hero-viz" aria-label="Animated hand landmarks cycling through finger counts">
+        <div class="viz-frame">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="viz-hud viz-hud-top">
+            <span>LANDMARKS <b>21</b></span>
+            <span>CLASS <b id="hero-hand-count">3</b> <i id="hero-hand-name">Three</i></span>
+          </div>
+          <canvas id="hero-hand"></canvas>
+          <div class="viz-hud viz-hud-bottom">
+            <span class="viz-scan" aria-hidden="true"></span>
+            <span>Real landmarks from the training set</span>
+          </div>
+        </div>
+      </figure>
     </div>
   </header>
 
   <main>
   <!-- ── Live Demo ───────────────────────────────────────────── -->
   <section id="demo" aria-labelledby="demo-title">
-    <div class="section-header">
-      <span class="eyebrow">Live demo</span>
-      <h2 id="demo-title">Try it with your webcam</h2>
-      <p>Video never leaves your device — detection and classification run locally in the browser.</p>
+    <div class="section-head">
+      <p class="section-index">01 — Live demo</p>
+      <h2 id="demo-title">Try it with your webcam.</h2>
+      <p class="section-lede">Video never leaves your device. Hold a count steady for a moment and the countdown locks in. Make a fist to cancel.</p>
     </div>
 
     <div class="demo-layout">
-      <!-- Left panel -->
-      <aside class="demo-panel demo-panel-left glass-panel" aria-label="Gesture info">
+      <aside class="panel demo-panel-left" aria-label="Gesture readout">
         <h3 class="panel-title">Gesture</h3>
         <div class="gesture-readout">
           <span class="gesture-number" id="ui-stable">—</span>
@@ -76,7 +110,7 @@
         </div>
         <div class="conf-bar" aria-hidden="true"><div class="conf-bar-fill" id="ui-conf-bar"></div></div>
 
-        <div class="panel-subtitle">Stability <span class="panel-subtitle-value" id="ui-votes">0 / 8</span></div>
+        <div class="panel-subtitle">Stability <span id="ui-votes">0 / 8</span></div>
         <div class="vote-meter" id="ui-vote-meter" aria-hidden="true"></div>
 
         <div class="panel-subtitle">Class probabilities</div>
@@ -87,16 +121,15 @@
           <span class="panel-value" id="ui-finger-count">—</span>
         </div>
         <div class="hand-status" id="ui-hand-status" role="status">
-          <span class="status-dot offline"></span>
-          <span>No hand</span>
+          <span class="status-dot offline"></span><span>No hand</span>
         </div>
       </aside>
 
-      <!-- Camera feed -->
       <div class="camera-box" id="camera-box">
+        <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
         <div class="camera-placeholder" id="camera-placeholder">
-          <div class="placeholder-icon" aria-hidden="true">📷</div>
-          <p>Click <strong>Start camera</strong> to begin</p>
+          <svg class="placeholder-icon" aria-hidden="true"><use href="#i-camera"/></svg>
+          <p>Camera is off</p>
           <button class="btn btn-primary btn-lg" id="btn-start-camera">Start camera</button>
           <p class="placeholder-hint">Works best with a well-lit hand facing the camera.</p>
         </div>
@@ -113,74 +146,53 @@
             <circle class="countdown-ring-progress" id="countdown-ring" cx="100" cy="100" r="90"/>
           </svg>
           <span class="countdown-number" id="countdown-number">3</span>
-          <span class="countdown-hint">Make a fist to cancel</span>
+          <span class="countdown-hint"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Locked · make a fist to cancel</span>
         </div>
         <div class="flash-overlay hidden" id="flash-overlay"></div>
       </div>
 
-      <!-- Right panel -->
-      <aside class="demo-panel demo-panel-right glass-panel" aria-label="Performance">
+      <aside class="panel demo-panel-right" aria-label="Performance">
         <h3 class="panel-title">Performance</h3>
-        <div class="panel-row">
-          <span class="panel-label">FPS</span>
-          <span class="panel-value" id="ui-fps">0</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Hand detect</span>
-          <span class="panel-value" id="ui-detect-ms">—</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Classifier</span>
-          <span class="panel-value" id="ui-classify-ms">—</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Engine</span>
-          <span class="panel-value engine-badge" id="ui-engine">loading…</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Countdown</span>
-          <span class="panel-value" id="ui-countdown">Ready</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Photos</span>
-          <span class="panel-value" id="ui-captures">0</span>
-        </div>
+        <div class="panel-row"><span class="panel-label">FPS</span><span class="panel-value" id="ui-fps">0</span></div>
+        <div class="panel-row"><span class="panel-label">Hand detect</span><span class="panel-value" id="ui-detect-ms">—</span></div>
+        <div class="panel-row"><span class="panel-label">Classifier</span><span class="panel-value" id="ui-classify-ms">—</span></div>
+        <div class="panel-row"><span class="panel-label">Engine</span><span class="panel-value engine-badge" id="ui-engine">loading</span></div>
+        <div class="panel-row"><span class="panel-label">Countdown</span><span class="panel-value" id="ui-countdown">Ready</span></div>
+        <div class="panel-row"><span class="panel-label">Photos</span><span class="panel-value" id="ui-captures">0</span></div>
         <div class="status-box">
           <span class="panel-label">Status</span>
           <p class="status-text" id="ui-status" aria-live="polite">Idle</p>
         </div>
-        <div class="captures-gallery" id="captures-gallery">
-          <h4>Recent captures</h4>
+        <div class="captures-gallery">
+          <h4 class="panel-label">Recent captures</h4>
           <div class="gallery-grid" id="gallery-grid"><p class="gallery-empty">No photos yet</p></div>
         </div>
       </aside>
     </div>
 
-    <!-- Controls bar -->
-    <div class="demo-controls glass-panel">
-      <button class="btn btn-accent" id="btn-capture" disabled>📸 Capture <kbd>Space</kbd></button>
-      <button class="btn btn-outline-sm btn-danger" id="btn-stop-camera" disabled>⏹ Stop camera</button>
-      <button class="btn btn-outline-sm" id="btn-manage-photos" disabled>🗂️ Manage photos</button>
-      <label class="toggle"><input type="checkbox" id="toggle-skeleton" checked> <span>Show skeleton</span></label>
-      <span class="control-hint">Hold 1–5 fingers → countdown · ✊ fist → cancel · <kbd>Space</kbd> snap · <kbd>Esc</kbd> cancel</span>
+    <div class="demo-controls panel">
+      <button class="btn btn-primary" id="btn-capture" disabled><svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg>Capture <kbd>Space</kbd></button>
+      <button class="btn btn-ghost btn-danger" id="btn-stop-camera" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg>Stop camera</button>
+      <button class="btn btn-ghost" id="btn-manage-photos" disabled><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Manage photos</button>
+      <label class="toggle"><input type="checkbox" id="toggle-skeleton" checked><span class="toggle-track" aria-hidden="true"></span><span>Skeleton</span></label>
+      <span class="control-hint">Hold 1–5 fingers to lock a countdown · fist to cancel · <kbd>Esc</kbd> cancel</span>
     </div>
 
-    <!-- Photo manager modal -->
     <div class="modal-backdrop hidden" id="photo-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div class="modal glass-panel">
+      <div class="modal panel">
         <div class="modal-header">
           <h3 id="modal-title">Manage photos</h3>
-          <button class="btn-icon" id="modal-close" aria-label="Close">✕</button>
+          <button class="btn-icon" id="modal-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
         </div>
         <div class="modal-actions-top">
-          <button class="btn btn-outline-sm" id="modal-select-all">Select all</button>
-          <button class="btn btn-outline-sm" id="modal-deselect-all">Deselect all</button>
+          <button class="btn btn-ghost btn-sm" id="modal-select-all">Select all</button>
+          <button class="btn btn-ghost btn-sm" id="modal-deselect-all">Deselect all</button>
           <span class="modal-count" id="modal-count">0 selected</span>
         </div>
         <div class="modal-grid" id="modal-grid"></div>
         <div class="modal-actions">
-          <button class="btn btn-primary" id="modal-download-zip" disabled>⬇ Download as ZIP</button>
-          <button class="btn btn-outline-sm btn-danger" id="modal-delete-selected" disabled>🗑 Delete selected</button>
+          <button class="btn btn-primary" id="modal-download-zip" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Download ZIP</button>
+          <button class="btn btn-ghost btn-danger" id="modal-delete-selected" disabled><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Delete selected</button>
         </div>
       </div>
     </div>
@@ -188,75 +200,71 @@
 
   <!-- ── Key Metrics ─────────────────────────────────────────── -->
   <section id="metrics" aria-labelledby="metrics-title">
-    <div class="section-header">
-      <span class="eyebrow">Key metrics</span>
-      <h2 id="metrics-title">Measured, not estimated</h2>
-      <p>Every number on this page comes from the project's evaluation and benchmark scripts. It refreshes whenever the pipeline runs.</p>
+    <div class="section-head">
+      <p class="section-index">02 — Metrics</p>
+      <h2 id="metrics-title">Measured, not estimated.</h2>
+      <p class="section-lede">Every number on this page is read from the output of the project's evaluation and benchmark scripts.</p>
     </div>
     <div class="metrics-grid">
-      <div class="metric-card glass-panel" data-animate>
-        <div class="metric-icon" aria-hidden="true">🎯</div>
-        <div class="metric-value" id="metric-accuracy">97.7%</div>
+      <div class="metric" data-animate>
         <div class="metric-label">Test accuracy</div>
-        <div class="metric-detail" id="metric-accuracy-detail">3,550 held-out samples · macro F1 97.8%</div>
-        <div class="metric-bar"><div class="metric-bar-fill" id="metric-accuracy-bar" style="--fill:97.7%"></div></div>
+        <div class="metric-value" id="metric-accuracy">96.7%</div>
+        <div class="metric-detail" id="metric-accuracy-detail">3,550 held-out samples</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="metric-accuracy-bar" style="--fill:96.7%"></div></div>
       </div>
-      <div class="metric-card glass-panel" data-animate>
-        <div class="metric-icon" aria-hidden="true">⚡</div>
-        <div class="metric-value" id="metric-pipeline">25 ms</div>
+      <div class="metric" data-animate>
         <div class="metric-label">End-to-end per frame</div>
-        <div class="metric-detail" id="metric-pipeline-detail">Detection + classification · 40 FPS ceiling</div>
+        <div class="metric-value" id="metric-pipeline">31 ms</div>
+        <div class="metric-detail" id="metric-pipeline-detail">Detection + classification</div>
       </div>
-      <div class="metric-card glass-panel" data-animate>
-        <div class="metric-icon" aria-hidden="true">🚀</div>
-        <div class="metric-value" id="metric-latency">0.03 ms</div>
+      <div class="metric" data-animate>
         <div class="metric-label">Classifier latency</div>
-        <div class="metric-detail" id="metric-latency-detail">NumPy engine vs 76 ms keras.predict()</div>
+        <div class="metric-value" id="metric-latency">0.03 ms</div>
+        <div class="metric-detail" id="metric-latency-detail">NumPy engine</div>
       </div>
-      <div class="metric-card glass-panel" data-animate>
-        <div class="metric-icon" aria-hidden="true">🧠</div>
-        <div class="metric-value" id="metric-params">18.7k</div>
+      <div class="metric" data-animate>
         <div class="metric-label">Model parameters</div>
-        <div class="metric-detail">76 KB in the browser · no TF.js runtime</div>
+        <div class="metric-value" id="metric-params">21.5k</div>
+        <div class="metric-detail">Runs in plain JavaScript · no TF.js runtime</div>
       </div>
     </div>
   </section>
 
   <!-- ── Benchmarks ──────────────────────────────────────────── -->
   <section id="benchmarks" aria-labelledby="bench-title">
-    <div class="section-header">
-      <span class="eyebrow">Benchmarks</span>
-      <h2 id="bench-title">Performance &amp; robustness</h2>
-      <p>Produced by <code>tools/benchmark.py</code> on real held-out webcam frames. <span id="bench-machine"></span></p>
+    <div class="section-head">
+      <p class="section-index">03 — Benchmarks</p>
+      <h2 id="bench-title">Performance and robustness.</h2>
+      <p class="section-lede">Produced by <code>tools/benchmark.py</code> on held-out webcam frames. <span id="bench-machine"></span></p>
     </div>
 
     <div class="bench-grid">
-      <div class="result-card glass-panel bench-wide">
+      <div class="card bench-wide">
         <div class="card-head">
           <h3>Classifier latency per frame</h3>
-          <span class="card-badge" id="bench-speedup-badge">2,618× faster</span>
+          <span class="card-badge" id="bench-speedup-badge">2,365× faster</span>
         </div>
-        <p class="card-sub">Calling <code>keras.predict()</code> per frame had ~75 ms of fixed overhead, which capped the app at about 12 FPS. Running the forward pass on extracted weights gives identical outputs (max diff 7×10⁻⁷).</p>
+        <p class="card-sub">Calling <code>keras.predict()</code> per frame carried ~60–75 ms of fixed overhead, capping the app near 12 FPS. Running the forward pass directly on the extracted weights gives identical outputs.</p>
         <div class="chart-box chart-box-short"><canvas id="latency-chart" role="img" aria-label="Classifier latency by backend, log scale"></canvas></div>
       </div>
 
-      <div class="result-card glass-panel">
+      <div class="card">
         <h3>Lighting robustness</h3>
         <p class="card-sub" id="lighting-note">Held-out webcam frames under simulated lighting conditions.</p>
         <div class="chart-box"><canvas id="lighting-chart" role="img" aria-label="Detection rate and end-to-end accuracy per lighting condition"></canvas></div>
         <details class="table-toggle"><summary>Show as table</summary><table class="results-table compact" id="lighting-table"></table></details>
       </div>
 
-      <div class="result-card glass-panel">
+      <div class="card">
         <h3>Temporal voting vs landmark jitter</h3>
-        <p class="card-sub">The 8-frame rolling vote cuts wrong-gesture triggers by up to ~40% as tracking noise grows.</p>
+        <p class="card-sub">The 8-frame rolling vote suppresses wrong-gesture triggers as tracking noise grows.</p>
         <div class="chart-box"><canvas id="temporal-chart" role="img" aria-label="Wrong-gesture rate with and without temporal voting"></canvas></div>
         <details class="table-toggle"><summary>Show as table</summary><table class="results-table compact" id="temporal-table"></table></details>
       </div>
     </div>
 
-    <div class="pipeline-breakdown glass-panel" id="pipeline-breakdown">
-      <h3>Where the time goes (per 640×480 frame)</h3>
+    <div class="card pipeline-breakdown" id="pipeline-breakdown">
+      <h3>Where the time goes, per 640×480 frame</h3>
       <div class="stack-bar" id="stack-bar" aria-hidden="true"></div>
       <ul class="stack-legend" id="stack-legend"></ul>
     </div>
@@ -264,122 +272,114 @@
 
   <!-- ── Pipeline ────────────────────────────────────────────── -->
   <section id="pipeline" aria-labelledby="pipeline-title">
-    <div class="section-header">
-      <span class="eyebrow">Architecture</span>
-      <h2 id="pipeline-title">From pixels to photo</h2>
-      <p>How each webcam frame flows through the gesture-to-capture system.</p>
+    <div class="section-head">
+      <p class="section-index">04 — Architecture</p>
+      <h2 id="pipeline-title">From pixels to photo.</h2>
+      <p class="section-lede">Each webcam frame passes through six stages.</p>
     </div>
     <ol class="pipeline-flow">
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">📷</div><div class="step-title">Webcam frame</div><div class="step-desc">30 FPS video input</div></li>
-      <li class="pipeline-arrow" aria-hidden="true">→</li>
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">🖐️</div><div class="step-title">Hand Landmarker</div><div class="step-desc">MediaPipe · 21 keypoints</div></li>
-      <li class="pipeline-arrow" aria-hidden="true">→</li>
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">📐</div><div class="step-title">63 features</div><div class="step-desc">21 × (x, y, z), standardised</div></li>
-      <li class="pipeline-arrow" aria-hidden="true">→</li>
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">🧠</div><div class="step-title">MLP classifier</div><div class="step-desc">128→64→32→6 softmax</div></li>
-      <li class="pipeline-arrow" aria-hidden="true">→</li>
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">🔄</div><div class="step-title">Stabiliser</div><div class="step-desc">8-frame majority vote</div></li>
-      <li class="pipeline-arrow" aria-hidden="true">→</li>
-      <li class="pipeline-step glass-panel" data-animate><div class="step-icon">📸</div><div class="step-title">State machine</div><div class="step-desc">Countdown → capture</div></li>
+      <li data-animate><span class="step-n">01</span><span class="step-title">Webcam frame</span><span class="step-desc">30 FPS video</span></li>
+      <li data-animate><span class="step-n">02</span><span class="step-title">Hand Landmarker</span><span class="step-desc">MediaPipe · 21 keypoints</span></li>
+      <li data-animate><span class="step-n">03</span><span class="step-title">85 features</span><span class="step-desc">Normalised pose + joint angles</span></li>
+      <li data-animate><span class="step-n">04</span><span class="step-title">MLP classifier</span><span class="step-desc">128 → 64 → 32 → 6</span></li>
+      <li data-animate><span class="step-n">05</span><span class="step-title">Stabiliser</span><span class="step-desc">8-frame majority vote</span></li>
+      <li data-animate><span class="step-n">06</span><span class="step-title">State machine</span><span class="step-desc">Hold · lock · capture</span></li>
     </ol>
   </section>
 
   <!-- ── Results ─────────────────────────────────────────────── -->
   <section id="results" aria-labelledby="results-title">
-    <div class="section-header">
-      <span class="eyebrow">Evaluation</span>
-      <h2 id="results-title">Detection results</h2>
-      <p>Per-class performance on the held-out test set.</p>
+    <div class="section-head">
+      <p class="section-index">05 — Evaluation</p>
+      <h2 id="results-title">Detection results.</h2>
+      <p class="section-lede">Per-class performance on the held-out test set.</p>
     </div>
     <div class="results-grid">
-      <div class="result-card glass-panel">
+      <div class="card">
         <h3>Per-class F1 score</h3>
         <div class="chart-box"><canvas id="f1-chart" role="img" aria-label="F1 score per finger-count class"></canvas></div>
       </div>
-      <div class="result-card glass-panel">
-        <h3>Confusion matrix <span class="card-sub-inline">rows = true, columns = predicted</span></h3>
+      <div class="card">
+        <h3>Confusion matrix <span class="card-sub-inline">rows true · columns predicted</span></h3>
         <div class="confusion-matrix" id="confusion-matrix"></div>
       </div>
     </div>
-    <div class="results-table-wrapper glass-panel">
+    <div class="card results-table-wrapper">
       <h3>Classification report</h3>
       <div class="table-scroll">
-      <table class="results-table">
-        <thead>
-          <tr><th>Label</th><th>Gesture</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr>
-        </thead>
-        <tbody id="results-tbody">
-          <tr><td>0</td><td>Fist</td><td>98.75%</td><td>99.58%</td><td>99.16%</td><td>475</td></tr>
-          <tr><td>1</td><td>Index</td><td>98.36%</td><td>98.04%</td><td>98.20%</td><td>611</td></tr>
-          <tr><td>2</td><td>Peace</td><td>95.60%</td><td>96.38%</td><td>95.99%</td><td>608</td></tr>
-          <tr><td>3</td><td>Three</td><td>96.71%</td><td>95.30%</td><td>96.00%</td><td>617</td></tr>
-          <tr><td>4</td><td>Four</td><td>97.58%</td><td>97.74%</td><td>97.66%</td><td>620</td></tr>
-          <tr><td>5</td><td>Open Hand</td><td>99.52%</td><td>99.68%</td><td>99.60%</td><td>619</td></tr>
-          <tr class="row-total"><td colspan="2"><strong>Macro avg</strong></td><td>97.75%</td><td>97.79%</td><td>97.77%</td><td>3,550</td></tr>
-        </tbody>
-      </table>
+        <table class="results-table">
+          <thead><tr><th>Label</th><th>Gesture</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
       </div>
     </div>
-    <div class="domain-note glass-panel" id="domain-note">
+    <div class="card domain-note" id="domain-note">
       <h3>Accuracy by data source</h3>
-      <p>Most test data comes from a public hand dataset. The per-source split shows how well the model generalises to this project's own webcam captures, the domain the app actually runs in.</p>
+      <p class="card-sub">Most test data comes from a public hand dataset. The webcam split is the domain the app actually runs in.</p>
       <div class="domain-bars" id="domain-bars"></div>
     </div>
   </section>
 
   <!-- ── Engineering ─────────────────────────────────────────── -->
   <section id="engineering" aria-labelledby="eng-title">
-    <div class="section-header">
-      <span class="eyebrow">Engineering</span>
-      <h2 id="eng-title">Built like production software</h2>
-      <p>Design decisions behind the system.</p>
+    <div class="section-head">
+      <p class="section-index">06 — Engineering</p>
+      <h2 id="eng-title">Design decisions.</h2>
     </div>
     <div class="approach-grid">
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">⚡</div>
+      <article class="approach" data-animate>
+        <span class="approach-n">A</span>
+        <h3>Position-invariant features</h3>
+        <p>Raw landmark coordinates encode where the hand is in the frame, so moving it off-centre or closer dropped accuracy to 62–83% and turned many 4s into 5s. Features are now wrist-relative, scale-normalised and include joint angles, with mirrored and jittered training copies. Webcam accuracy rose from 89.6% to 96.2%.</p>
+      </article>
+      <article class="approach" data-animate>
+        <span class="approach-n">B</span>
         <h3>Custom inference engine</h3>
-        <p>Profiling showed <code>keras.predict()</code> spent ~75 ms per frame on dispatch overhead. The trained weights now run as a NumPy forward pass in 0.03 ms, and as a 60-line JS engine in the browser. Parity tests check both against Keras.</p>
-      </div>
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">🧪</div>
+        <p><code>keras.predict()</code> spent tens of milliseconds per frame on dispatch overhead. The trained weights run as a NumPy forward pass in ~0.03 ms, and as a small JS engine in the browser. Parity tests check both.</p>
+      </article>
+      <article class="approach" data-animate>
+        <span class="approach-n">C</span>
         <h3>Tested state machine</h3>
-        <p>The countdown/capture logic is a pure, I/O-free <code>GestureController</code>. Unit tests cover arming, cancelling, re-arming, cooldown and burst-shot prevention with synthetic timestamps.</p>
-      </div>
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">🔄</div>
+        <p>Countdown logic lives in an I/O-free <code>GestureController</code>. A gesture must hold for 0.6 s to arm, then the countdown is locked until capture. Unit tests drive it with synthetic timestamps.</p>
+      </article>
+      <article class="approach" data-animate>
+        <span class="approach-n">D</span>
         <h3>Temporal stabilisation</h3>
-        <p>An 8-frame majority vote (≥ 4 agreeing frames, ≥ 55% mean confidence) turns noisy per-frame predictions into deliberate actions. The jitter benchmark above measures its effect.</p>
-      </div>
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">📊</div>
+        <p>An 8-frame majority vote (at least 4 agreeing frames and 55% mean confidence) turns noisy per-frame predictions into deliberate actions.</p>
+      </article>
+      <article class="approach" data-animate>
+        <span class="approach-n">E</span>
         <h3>Reproducible metrics</h3>
-        <p>One command runs collection → preprocessing → training → evaluation → benchmarks → web export. This page reads the resulting <code>metrics.json</code>, so the site never drifts from the model.</p>
-      </div>
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">🔒</div>
-        <h3>Privacy by design</h3>
-        <p>Inference runs entirely on-device, on both desktop and web. Webcam frames are never uploaded, and photos stay in memory until you download them.</p>
-      </div>
-      <div class="approach-card glass-panel" data-animate>
-        <div class="approach-icon">🛡️</div>
-        <h3>Graceful degradation</h3>
-        <p>GPU→CPU fallback for the hand tracker, a geometric finger-counting fallback if the model can't load, and clear camera-permission errors.</p>
-      </div>
+        <p>One command runs preprocessing, training, evaluation and web export. This page reads the resulting <code>metrics.json</code>, so it never drifts from the model.</p>
+      </article>
+      <article class="approach" data-animate>
+        <span class="approach-n">F</span>
+        <h3>Private by default</h3>
+        <p>Inference runs on-device on desktop and web. Frames are never uploaded, and photos stay in memory until you download them.</p>
+      </article>
     </div>
   </section>
   </main>
 
-  <!-- ── Footer ──────────────────────────────────────────────── -->
   <footer>
     <div class="footer-inner">
-      <p>FingerDetect AI — built with MediaPipe, TensorFlow/Keras, NumPy and OpenCV</p>
-      <p class="footer-sub">Desktop app: <code>python src/final_camera_app.py</code> · Benchmarks: <code>python tools/benchmark.py</code> · Tests: <code>pytest</code></p>
-      <p class="footer-sub" id="footer-generated"></p>
+      <div>
+        <a href="#" class="wordmark">
+          <svg class="wordmark-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="22" r="2.5" class="mark-dot"/><path d="M16 22 9 11M16 22 13 7M16 22l3-15M16 22l7-11"/></svg>
+          FingerDetect
+        </a>
+        <p class="footer-sub">Built by <a href="https://github.com/zubairnajam" target="_blank" rel="noopener">Zubair Najam</a> with MediaPipe, TensorFlow, NumPy and OpenCV.</p>
+      </div>
+      <div class="footer-meta">
+        <p class="footer-sub"><code>python src/final_camera_app.py</code> · <code>python tools/benchmark.py</code> · <code>pytest</code></p>
+        <p class="footer-sub" id="footer-generated"></p>
+      </div>
     </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="visuals.js?v=4"></script>
+  <script type="module" src="app.js?v=4"></script>
 </body>
 </html>

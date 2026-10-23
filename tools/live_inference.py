@@ -169,7 +169,8 @@ def main() -> None:
             raw_confidence = 0.0
             features = flatten_landmarks(detection_result)
             if features is not None:
-                raw_prediction, raw_confidence = predict_finger_count(features, model, mean, std)
+                aspect = raw_frame.shape[1] / raw_frame.shape[0]
+                raw_prediction, raw_confidence = predict_finger_count(features, model, mean, std, aspect)
                 prediction_window.append((raw_prediction, raw_confidence))
                 status_text = "Hand detected."
             else:

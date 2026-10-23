@@ -11,8 +11,10 @@ It is safe to rerun after collecting more data and rebuilding the dataset.
 
 from __future__ import annotations
 
-from pathlib import Path
+import csv
 import json
+import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,14 +25,21 @@ from sklearn.model_selection import train_test_split
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.features import build_features, image_aspects, mirror_landmarks  # noqa: E402
+
 TRAIN_DIR = PROJECT_ROOT / "data" / "train"
 TEST_DIR = PROJECT_ROOT / "data" / "test"
 MODELS_DIR = PROJECT_ROOT / "models"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs" / "training"
 
 RANDOM_STATE = 42
-BATCH_SIZE = 8
-EPOCHS = 100
+BATCH_SIZE = 128
+EPOCHS = 200
+JITTER_COPIES = 2
+USE_CLASS_WEIGHTS = False  # mirrored + jittered data is already near-balanced
+JITTER_MAX_PIXELS = 4.0  # landmark noise, in pixels at 640 px frame width
 VALIDATION_SPLIT = 0.2
 LEARNING_RATE = 1e-3
 LABELS = [0, 1, 2, 3, 4, 5]
@@ -48,24 +57,31 @@ def ensure_output_dirs() -> None:
     OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def jitter_landmarks(raw: np.ndarray, max_pixels: float, rng: np.random.Generator) -> np.ndarray:
+    """Add Gaussian noise to landmark x/y, with a random strength per sample up to ``max_pixels``."""
+    sigma = rng.uniform(0, max_pixels / 640, size=(len(raw), 1))
+    noise = rng.normal(size=raw.shape).astype(np.float32) * sigma
+    noise[:, 2::3] = 0.0  # leave depth alone
+    return (raw + noise).astype(np.float32)
+
+
+def load_aspects(csv_path: Path, n_rows: int) -> np.ndarray:
+    """Per-row image aspect ratio, from the image paths in the preprocessing CSV."""
+    if not csv_path.exists():
+        return np.ones(n_rows, dtype=np.float32)
+    with csv_path.open(encoding="utf-8") as handle:
+        return image_aspects(row["image_path"] for row in csv.DictReader(handle))
+
+
 def load_dataset():
-    """Load the train/test arrays created during preprocessing."""
+    """Load the raw landmark arrays created during preprocessing, plus image aspects."""
     x_train = np.load(TRAIN_DIR / "X_train.npy")
     y_train = np.load(TRAIN_DIR / "y_train.npy")
     x_test = np.load(TEST_DIR / "X_test.npy")
     y_test = np.load(TEST_DIR / "y_test.npy")
-    return x_train, y_train, x_test, y_test
-
-
-def standardize(train_features: np.ndarray, test_features: np.ndarray):
-    """Standardize features using train-set statistics only."""
-    mean = train_features.mean(axis=0)
-    std = train_features.std(axis=0)
-    std[std == 0] = 1.0
-
-    x_train_scaled = (train_features - mean) / std
-    x_test_scaled = (test_features - mean) / std
-    return x_train_scaled, x_test_scaled, mean, std
+    a_train = load_aspects(TRAIN_DIR / "train_landmarks.csv", len(x_train))
+    a_test = load_aspects(TEST_DIR / "test_landmarks.csv", len(x_test))
+    return x_train, y_train, a_train, x_test, y_test, a_test
 
 
 def build_model(input_dim: int, num_classes: int) -> tf.keras.Model:
@@ -151,32 +167,49 @@ def main() -> None:
     set_seed()
     ensure_output_dirs()
 
-    x_train, y_train, x_test, y_test = load_dataset()
-    if len(x_train) < 10 or len(x_test) < 5:
+    raw_train, y_train, a_train, raw_test, y_test, a_test = load_dataset()
+    if len(raw_train) < 10 or len(raw_test) < 5:
         raise RuntimeError("Dataset is too small to train reliably. Collect more samples first.")
 
-    x_train_scaled, x_test_scaled, mean, std = standardize(x_train, x_test)
-
-    x_fit, x_val, y_fit, y_val = train_test_split(
-        x_train_scaled,
+    raw_fit, raw_val, y_fit, y_val, a_fit, a_val = train_test_split(
+        raw_train,
         y_train,
+        a_train,
         test_size=VALIDATION_SPLIT,
         random_state=RANDOM_STATE,
         stratify=y_train,
     )
+    # Mirrored copies teach the model left and right hands equally; jittered
+    # copies make it tolerant of the frame-to-frame wobble in live tracking.
+    raw_fit = np.vstack([raw_fit, mirror_landmarks(raw_fit)])
+    y_fit = np.concatenate([y_fit, y_fit])
+    a_fit = np.concatenate([a_fit, a_fit])
+    rng = np.random.default_rng(RANDOM_STATE)
+    copies = [raw_fit] + [jitter_landmarks(raw_fit, JITTER_MAX_PIXELS, rng) for _ in range(JITTER_COPIES)]
+    x_fit = build_features(np.vstack(copies), np.tile(a_fit, len(copies)))
+    y_fit = np.tile(y_fit, len(copies))
+    x_val = build_features(raw_val, a_val)
+    x_test = build_features(raw_test, a_test)
 
-    model = build_model(input_dim=x_train_scaled.shape[1], num_classes=len(LABELS))
+    mean = x_fit.mean(axis=0)
+    std = x_fit.std(axis=0)
+    std[std == 0] = 1.0
+    x_fit = (x_fit - mean) / std
+    x_val = (x_val - mean) / std
+    x_test_scaled = (x_test - mean) / std
+
+    model = build_model(input_dim=x_fit.shape[1], num_classes=len(LABELS))
     class_weights = build_class_weights(y_fit)
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             monitor="val_loss",
-            patience=12,
+            patience=30,
             restore_best_weights=True,
         ),
         tf.keras.callbacks.ReduceLROnPlateau(
             monitor="val_loss",
             factor=0.5,
-            patience=6,
+            patience=10,
             min_lr=1e-5,
         ),
     ]
@@ -189,7 +222,7 @@ def main() -> None:
         batch_size=BATCH_SIZE,
         verbose=0,
         callbacks=callbacks,
-        class_weight=class_weights,
+        class_weight=class_weights if USE_CLASS_WEIGHTS else None,
     )
 
     probabilities = model.predict(x_test_scaled, verbose=0)
@@ -214,10 +247,11 @@ def main() -> None:
         handle.write(report_text)
 
     summary = {
-        "train_samples": int(len(x_train)),
+        "train_samples": int(len(raw_train)),
+        "augmented_fit_samples": int(len(x_fit)),
         "validation_samples": int(len(x_val)),
         "test_samples": int(len(x_test)),
-        "feature_size": int(x_train.shape[1]),
+        "feature_size": int(x_fit.shape[1]),
         "epochs_ran": int(len(history.history["loss"])),
         "test_accuracy": float(test_accuracy),
         "class_weights": {str(label): weight for label, weight in class_weights.items()},
@@ -229,7 +263,7 @@ def main() -> None:
         json.dump(summary, handle, indent=2)
 
     print("Training complete.")
-    print(f"Train samples: {len(x_train)}")
+    print(f"Train samples: {len(raw_train)} (+ mirrored copies)")
     print(f"Validation samples: {len(x_val)}")
     print(f"Test samples: {len(x_test)}")
     print(f"Epochs run: {len(history.history['loss'])}")

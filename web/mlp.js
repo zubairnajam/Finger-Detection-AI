@@ -17,6 +17,47 @@ const ACTIVATIONS = {
   },
 };
 
+/* Mirrors src/features.py build_features() exactly (checked by tests/test_web_engine.py).
+   Makes the input independent of where the hand is in the frame and how big it is. */
+const FINGER_CHAINS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [0, 9, 10, 11, 12], [0, 13, 14, 15, 16], [0, 17, 18, 19, 20]];
+const FINGERTIPS = [4, 8, 12, 16, 20];
+const EPS = 1e-6;
+
+/**
+ * @param {ArrayLike<number>} raw  63 values: x, y, z for each of the 21 landmarks
+ * @param {number} aspect  source frame width / height
+ * @returns {Float32Array} 85 model-ready (unscaled) features
+ */
+export function buildFeatures(raw, aspect = 1) {
+  const p = new Float32Array(63);
+  for (let i = 0; i < 21; i++) {
+    p[i * 3] = raw[i * 3] * aspect;
+    p[i * 3 + 1] = raw[i * 3 + 1];
+    p[i * 3 + 2] = raw[i * 3 + 2];
+  }
+  const wx = p[0], wy = p[1], wz = p[2];
+  for (let i = 0; i < 21; i++) { p[i * 3] -= wx; p[i * 3 + 1] -= wy; p[i * 3 + 2] -= wz; }
+  const scale = Math.max(Math.hypot(p[27], p[28]), EPS); // wrist -> middle knuckle (landmark 9)
+  for (let i = 0; i < 63; i++) p[i] /= scale;
+
+  const dist = (a, b) => Math.hypot(p[a * 3] - p[b * 3], p[a * 3 + 1] - p[b * 3 + 1], p[a * 3 + 2] - p[b * 3 + 2]);
+  const out = new Float32Array(85);
+  out.set(p);
+  let k = 63;
+  for (const chain of FINGER_CHAINS) {
+    for (let j = 0; j + 2 < chain.length; j++) {
+      const [a, b, c] = [chain[j] * 3, chain[j + 1] * 3, chain[j + 2] * 3];
+      const ux = p[a] - p[b], uy = p[a + 1] - p[b + 1], uz = p[a + 2] - p[b + 2];
+      const vx = p[c] - p[b], vy = p[c + 1] - p[b + 1], vz = p[c + 2] - p[b + 2];
+      out[k++] = (ux * vx + uy * vy + uz * vz) / (Math.hypot(ux, uy, uz) * Math.hypot(vx, vy, vz) + EPS);
+    }
+  }
+  for (const tip of FINGERTIPS) out[k++] = Math.hypot(p[tip * 3], p[tip * 3 + 1], p[tip * 3 + 2]);
+  out[k++] = dist(4, 5);
+  out[k++] = dist(4, 17);
+  return out;
+}
+
 export class MLP {
   /**
    * @param {object} manifest  parsed mlp.json
@@ -51,7 +92,7 @@ export class MLP {
     return new MLP(manifest, await binResp.arrayBuffer());
   }
 
-  /** @param {ArrayLike<number>} features raw (unscaled) 63-value landmark vector */
+  /** @param {ArrayLike<number>} features output of buildFeatures() (unscaled) */
   predictProba(features) {
     let h = new Float32Array(features.length);
     for (let i = 0; i < h.length; i++) h[i] = (features[i] - this.mean[i]) / this.std[i];
@@ -69,8 +110,9 @@ export class MLP {
     return h;
   }
 
-  predict(features) {
-    const probs = this.predictProba(features);
+  /** @param {ArrayLike<number>} landmarks raw 63-value landmark vector; @param {number} aspect frame width / height */
+  predict(landmarks, aspect = 1) {
+    const probs = this.predictProba(buildFeatures(landmarks, aspect));
     let best = 0;
     for (let i = 1; i < probs.length; i++) if (probs[i] > probs[best]) best = i;
     return { label: this.labels[best], confidence: probs[best], probs };

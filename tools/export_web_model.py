@@ -29,6 +29,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.config import CLASS_NAMES, LABELS, WEB_DIR
+from src.features import FEATURE_SIZE, FEATURE_VERSION
 from src.inference import NumpyMLP
 from src.prediction import load_model_and_scaler
 
@@ -54,6 +55,8 @@ def export(model: NumpyMLP, mean: np.ndarray, std: np.ndarray, out_dir: Path = O
 
     manifest = {
         "format": "finger-mlp/v1",
+        # Input is src/features.build_features(landmarks), mirrored by buildFeatures() in web/mlp.js.
+        "features": {"version": FEATURE_VERSION, "size": FEATURE_SIZE},
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "weights_file": bin_path.name,
         "weights_float32_count": int(blob.size),
